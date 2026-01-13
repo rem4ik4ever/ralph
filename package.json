@@ -1,0 +1,42 @@
+{
+  "name": "ralph-cli",
+  "version": "0.1.0",
+  "description": "Loop coding agent CLI - run agents headlessly in a loop",
+  "type": "module",
+  "bin": {
+    "ralph": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "cli",
+    "agent",
+    "claude",
+    "loop",
+    "automation"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "nanoid": "^5.0.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
