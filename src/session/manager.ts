@@ -5,12 +5,11 @@ import { nanoid } from 'nanoid'
 
 export interface SessionMeta {
   id: string
-  task: string
+  promptFiles: string[]
   agent: string
   cwd: string
   iterations: number
   startTime: string
-  contextFiles?: string[]
 }
 
 export function getRalphDir(): string {
@@ -26,10 +25,9 @@ export function getSessionDir(sessionId: string): string {
 }
 
 export interface CreateSessionOpts {
-  task: string
+  promptFiles: string[]
   agent: string
   iterations: number
-  contextFiles?: string[]
 }
 
 export async function createSession(opts: CreateSessionOpts): Promise<string> {
@@ -40,12 +38,11 @@ export async function createSession(opts: CreateSessionOpts): Promise<string> {
 
   const meta: SessionMeta = {
     id: sessionId,
-    task: opts.task,
+    promptFiles: opts.promptFiles,
     agent: opts.agent,
     cwd: process.cwd(),
     iterations: opts.iterations,
     startTime: new Date().toISOString(),
-    contextFiles: opts.contextFiles,
   }
 
   await writeFile(join(sessionDir, 'meta.json'), JSON.stringify(meta, null, 2))

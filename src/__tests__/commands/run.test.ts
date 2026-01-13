@@ -17,6 +17,7 @@ vi.mock('../../session/index.js', () => ({
 
 vi.mock('../../utils/index.js', () => ({
   buildPrompt: vi.fn(),
+  COMPLETION_MARKER: '<ralph>RALPH_COMPLETED</ralph>',
 }))
 
 describe('commands/run', () => {
@@ -60,7 +61,7 @@ describe('commands/run', () => {
     vi.mocked(agents.isValidAgent).mockReturnValue(false)
 
     await expect(run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'invalid',
       iterations: '1',
     })).rejects.toThrow('process.exit called')
@@ -70,7 +71,7 @@ describe('commands/run', () => {
 
   it('validates iterations is positive number', async () => {
     await expect(run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'claude',
       iterations: '0',
     })).rejects.toThrow('process.exit called')
@@ -80,7 +81,7 @@ describe('commands/run', () => {
 
   it('validates iterations is a number', async () => {
     await expect(run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'claude',
       iterations: 'abc',
     })).rejects.toThrow('process.exit called')
@@ -88,14 +89,13 @@ describe('commands/run', () => {
     expect(mockExit).toHaveBeenCalledWith(1)
   })
 
-  it('handles context file read errors', async () => {
+  it('handles prompt file read errors', async () => {
     vi.mocked(utils.buildPrompt).mockRejectedValue(new Error('File not found'))
 
     await expect(run({
-      task: 'test',
+      prompt: ['missing.md'],
       agent: 'claude',
       iterations: '1',
-      context: ['missing.md'],
     })).rejects.toThrow('process.exit called')
 
     expect(mockExit).toHaveBeenCalledWith(1)
@@ -103,23 +103,21 @@ describe('commands/run', () => {
 
   it('creates session with correct options', async () => {
     await run({
-      task: 'my task',
+      prompt: ['prompt.md', 'context.md'],
       agent: 'claude',
       iterations: '3',
-      context: ['file.md'],
     })
 
     expect(session.createSession).toHaveBeenCalledWith({
-      task: 'my task',
+      promptFiles: ['prompt.md', 'context.md'],
       agent: 'claude',
       iterations: 3,
-      contextFiles: ['file.md'],
     })
   })
 
   it('runs correct number of iterations', async () => {
     await run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'claude',
       iterations: '3',
     })
@@ -129,7 +127,7 @@ describe('commands/run', () => {
 
   it('writes log after each iteration', async () => {
     await run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'claude',
       iterations: '2',
     })
@@ -143,17 +141,21 @@ describe('commands/run', () => {
     vi.mocked(utils.buildPrompt).mockResolvedValue('built prompt content')
 
     await run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'claude',
       iterations: '1',
     })
 
-    expect(mockAgent.execute).toHaveBeenCalledWith('built prompt content', expect.any(String))
+    expect(mockAgent.execute).toHaveBeenCalledWith(
+      'built prompt content',
+      expect.any(String),
+      expect.objectContaining({ onOutput: expect.any(Function) })
+    )
   })
 
   it('outputs session path on completion', async () => {
     await run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'claude',
       iterations: '1',
     })
@@ -171,12 +173,59 @@ describe('commands/run', () => {
     })
 
     await run({
-      task: 'test',
+      prompt: ['test.md'],
       agent: 'claude',
       iterations: '1',
     })
 
     // Should still complete, just log the error
     expect(session.writeLog).toHaveBeenCalled()
+  })
+
+  it('stops early when completion marker found', async () => {
+    mockAgent.execute.mockResolvedValue({
+      output: 'done <ralph>RALPH_COMPLETED</ralph>',
+      exitCode: 0,
+      duration: 100,
+    })
+
+    await run({
+      prompt: ['test.md'],
+      agent: 'claude',
+      iterations: '5',
+    })
+
+    // Should stop after first iteration
+    expect(mockAgent.execute).toHaveBeenCalledTimes(1)
+  })
+
+  it('continues if completion marker not found', async () => {
+    mockAgent.execute.mockResolvedValue({
+      output: 'still working',
+      exitCode: 0,
+      duration: 100,
+    })
+
+    await run({
+      prompt: ['test.md'],
+      agent: 'claude',
+      iterations: '3',
+    })
+
+    expect(mockAgent.execute).toHaveBeenCalledTimes(3)
+  })
+
+  it('stops on second iteration if marker found', async () => {
+    mockAgent.execute
+      .mockResolvedValueOnce({ output: 'working', exitCode: 0, duration: 100 })
+      .mockResolvedValueOnce({ output: '<ralph>RALPH_COMPLETED</ralph>', exitCode: 0, duration: 100 })
+
+    await run({
+      prompt: ['test.md'],
+      agent: 'claude',
+      iterations: '5',
+    })
+
+    expect(mockAgent.execute).toHaveBeenCalledTimes(2)
   })
 })

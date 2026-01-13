@@ -1,13 +1,12 @@
 import chalk from 'chalk'
 import { getAgent, isValidAgent } from '../agents/index.js'
 import { createSession, writeLog, getSessionDir } from '../session/index.js'
-import { buildPrompt } from '../utils/index.js'
+import { buildPrompt, COMPLETION_MARKER } from '../utils/index.js'
 
 export interface RunOptions {
-  task: string
+  prompt: string[]
   agent: string
   iterations: string
-  context?: string[]
 }
 
 export async function run(opts: RunOptions): Promise<void> {
@@ -27,22 +26,21 @@ export async function run(opts: RunOptions): Promise<void> {
 
   const agent = getAgent(opts.agent)
 
-  // Build prompt
+  // Build prompt with completion instructions
   let prompt: string
   try {
-    prompt = await buildPrompt(opts.task, opts.context)
+    prompt = await buildPrompt(opts.prompt)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(chalk.red(`Failed to read context files: ${message}`))
+    console.error(chalk.red(`Failed to read prompt files: ${message}`))
     process.exit(1)
   }
 
   // Create session
   const sessionId = await createSession({
-    task: opts.task,
+    promptFiles: opts.prompt,
     agent: opts.agent,
     iterations,
-    contextFiles: opts.context,
   })
 
   console.log(chalk.blue(`Session: ${sessionId}`))
@@ -51,10 +49,19 @@ export async function run(opts: RunOptions): Promise<void> {
   console.log()
 
   // Run loop
-  for (let i = 0; i < iterations; i++) {
-    console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
+  let completed = false
+  let actualIterations = 0
 
-    const result = await agent.execute(prompt, process.cwd())
+  for (let i = 0; i < iterations; i++) {
+    actualIterations++
+    console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
+    console.log()
+
+    const result = await agent.execute(prompt, process.cwd(), {
+      onOutput: (chunk) => process.stdout.write(chunk),
+    })
+
+    console.log()
     await writeLog(sessionId, i, result)
 
     if (result.exitCode !== 0) {
@@ -62,9 +69,20 @@ export async function run(opts: RunOptions): Promise<void> {
     } else {
       console.log(chalk.green(`  Done (${result.duration}ms)`))
     }
+
+    // Check for completion marker
+    if (result.output.includes(COMPLETION_MARKER)) {
+      console.log(chalk.cyan(`  Agent signaled task complete`))
+      completed = true
+      break
+    }
   }
 
   console.log()
-  console.log(chalk.green(`Completed ${iterations} iterations`))
+  if (completed) {
+    console.log(chalk.green(`Task completed after ${actualIterations} iteration(s)`))
+  } else {
+    console.log(chalk.yellow(`Reached max iterations (${iterations})`))
+  }
   console.log(chalk.gray(`Logs: ${getSessionDir(sessionId)}`))
 }

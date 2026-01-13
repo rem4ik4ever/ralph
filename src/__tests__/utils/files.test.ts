@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFile } from 'node:fs/promises'
-import { readContextFiles, buildPrompt } from '../../utils/files.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { readFile, access } from 'node:fs/promises'
+import { readPromptFiles, buildPrompt, COMPLETION_MARKER } from '../../utils/files.js'
 
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
+  access: vi.fn(),
 }))
 
 describe('utils/files', () => {
@@ -11,85 +12,91 @@ describe('utils/files', () => {
     vi.clearAllMocks()
   })
 
-  describe('readContextFiles', () => {
-    it('reads single file', async () => {
+  describe('readPromptFiles', () => {
+    it('reads file when it exists', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
       vi.mocked(readFile).mockResolvedValue('file content')
 
-      const result = await readContextFiles(['test.md'])
+      const result = await readPromptFiles(['test.md'])
 
       expect(readFile).toHaveBeenCalledTimes(1)
-      expect(result).toContain('# File: test.md')
-      expect(result).toContain('file content')
+      expect(result).toBe('file content')
+    })
+
+    it('uses text directly when file does not exist', async () => {
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'))
+
+      const result = await readPromptFiles(['fix the bug'])
+
+      expect(readFile).not.toHaveBeenCalled()
+      expect(result).toBe('fix the bug')
+    })
+
+    it('handles mix of files and text', async () => {
+      vi.mocked(access)
+        .mockResolvedValueOnce(undefined) // first is file
+        .mockRejectedValueOnce(new Error('ENOENT')) // second is text
+      vi.mocked(readFile).mockResolvedValue('file content')
+
+      const result = await readPromptFiles(['prompt.md', 'also do this task'])
+
+      expect(readFile).toHaveBeenCalledTimes(1)
+      expect(result).toBe('file content\n\nalso do this task')
     })
 
     it('reads multiple files', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
       vi.mocked(readFile)
         .mockResolvedValueOnce('content 1')
         .mockResolvedValueOnce('content 2')
 
-      const result = await readContextFiles(['file1.md', 'file2.md'])
+      const result = await readPromptFiles(['file1.md', 'file2.md'])
 
       expect(readFile).toHaveBeenCalledTimes(2)
-      expect(result).toContain('# File: file1.md')
-      expect(result).toContain('content 1')
-      expect(result).toContain('# File: file2.md')
-      expect(result).toContain('content 2')
+      expect(result).toBe('content 1\n\ncontent 2')
     })
 
-    it('concatenates files with newlines', async () => {
-      vi.mocked(readFile)
-        .mockResolvedValueOnce('a')
-        .mockResolvedValueOnce('b')
+    it('handles multiple text inputs', async () => {
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'))
 
-      const result = await readContextFiles(['1.md', '2.md'])
+      const result = await readPromptFiles(['task one', 'task two'])
 
-      expect(result).toContain('\n\n')
-    })
-
-    it('throws on missing file', async () => {
-      vi.mocked(readFile).mockRejectedValue(new Error('ENOENT'))
-
-      await expect(readContextFiles(['missing.md'])).rejects.toThrow('ENOENT')
+      expect(result).toBe('task one\n\ntask two')
     })
 
     it('handles empty file', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
       vi.mocked(readFile).mockResolvedValue('')
 
-      const result = await readContextFiles(['empty.md'])
+      const result = await readPromptFiles(['empty.md'])
 
-      expect(result).toContain('# File: empty.md')
+      expect(result).toBe('')
     })
   })
 
   describe('buildPrompt', () => {
-    it('returns task only when no context files', async () => {
-      const result = await buildPrompt('my task')
+    it('appends completion instructions', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readFile).mockResolvedValue('my task')
 
-      expect(result).toBe('my task')
-    })
-
-    it('returns task only when context files is empty array', async () => {
-      const result = await buildPrompt('my task', [])
-
-      expect(result).toBe('my task')
-    })
-
-    it('combines task and context files', async () => {
-      vi.mocked(readFile).mockResolvedValue('context content')
-
-      const result = await buildPrompt('my task', ['context.md'])
+      const result = await buildPrompt(['task.md'])
 
       expect(result).toContain('my task')
-      expect(result).toContain('---')
-      expect(result).toContain('context content')
+      expect(result).toContain(COMPLETION_MARKER)
     })
 
-    it('task comes before context', async () => {
-      vi.mocked(readFile).mockResolvedValue('context')
+    it('includes completion marker in instructions', async () => {
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'))
 
-      const result = await buildPrompt('task', ['file.md'])
+      const result = await buildPrompt(['do something'])
 
-      expect(result.indexOf('task')).toBeLessThan(result.indexOf('context'))
+      expect(result).toContain('<ralph>RALPH_COMPLETED</ralph>')
+    })
+  })
+
+  describe('COMPLETION_MARKER', () => {
+    it('exports correct marker', () => {
+      expect(COMPLETION_MARKER).toBe('<ralph>RALPH_COMPLETED</ralph>')
     })
   })
 })

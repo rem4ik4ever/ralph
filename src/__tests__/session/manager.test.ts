@@ -48,7 +48,7 @@ describe('session/manager', () => {
   describe('createSession', () => {
     it('creates session directory', async () => {
       await createSession({
-        task: 'test task',
+        promptFiles: ['prompt.md'],
         agent: 'claude',
         iterations: 4,
       })
@@ -64,26 +64,24 @@ describe('session/manager', () => {
       process.cwd = vi.fn(() => '/test/cwd')
 
       await createSession({
-        task: 'test task',
+        promptFiles: ['prompt.md', 'context.md'],
         agent: 'claude',
         iterations: 4,
-        contextFiles: ['file1.md', 'file2.md'],
       })
 
       expect(writeFile).toHaveBeenCalledWith(
         '/home/test/.ralph/sessions/abc123/meta.json',
-        expect.stringContaining('"task": "test task"')
+        expect.stringContaining('"promptFiles"')
       )
 
       const metaCall = vi.mocked(writeFile).mock.calls[0]
       const meta = JSON.parse(metaCall[1] as string)
 
       expect(meta.id).toBe('abc123')
-      expect(meta.task).toBe('test task')
+      expect(meta.promptFiles).toEqual(['prompt.md', 'context.md'])
       expect(meta.agent).toBe('claude')
       expect(meta.cwd).toBe('/test/cwd')
       expect(meta.iterations).toBe(4)
-      expect(meta.contextFiles).toEqual(['file1.md', 'file2.md'])
       expect(meta.startTime).toBeDefined()
 
       process.cwd = originalCwd
@@ -91,7 +89,7 @@ describe('session/manager', () => {
 
     it('returns session ID', async () => {
       const sessionId = await createSession({
-        task: 'test',
+        promptFiles: ['test.md'],
         agent: 'claude',
         iterations: 1,
       })
@@ -99,9 +97,9 @@ describe('session/manager', () => {
       expect(sessionId).toBe('abc123')
     })
 
-    it('handles missing context files', async () => {
+    it('handles single prompt file', async () => {
       await createSession({
-        task: 'test',
+        promptFiles: ['task.md'],
         agent: 'claude',
         iterations: 1,
       })
@@ -109,7 +107,7 @@ describe('session/manager', () => {
       const metaCall = vi.mocked(writeFile).mock.calls[0]
       const meta = JSON.parse(metaCall[1] as string)
 
-      expect(meta.contextFiles).toBeUndefined()
+      expect(meta.promptFiles).toEqual(['task.md'])
     })
   })
 })

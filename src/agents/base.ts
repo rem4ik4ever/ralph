@@ -4,9 +4,13 @@ export interface AgentResult {
   duration: number
 }
 
+export interface ExecuteOptions {
+  onOutput?: (chunk: string) => void
+}
+
 export interface Agent {
   name: string
-  execute(prompt: string, cwd: string): Promise<AgentResult>
+  execute(prompt: string, cwd: string, options?: ExecuteOptions): Promise<AgentResult>
 }
 
 export type AgentType = 'claude'
