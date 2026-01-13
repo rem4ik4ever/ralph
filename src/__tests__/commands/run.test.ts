@@ -60,11 +60,10 @@ describe('commands/run', () => {
   it('validates agent type', async () => {
     vi.mocked(agents.isValidAgent).mockReturnValue(false)
 
-    await expect(run({
-      prompt: ['test.md'],
-      agent: 'invalid',
-      iterations: '1',
-    })).rejects.toThrow('process.exit called')
+    await expect(run(
+      ['test.md'],
+      { agent: 'invalid', iterations: '1' }
+    )).rejects.toThrow('process.exit called')
 
     expect(mockExit).toHaveBeenCalledWith(1)
   })

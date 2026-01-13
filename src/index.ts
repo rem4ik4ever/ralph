@@ -10,7 +10,7 @@ program
 program
   .command('run')
   .description('Run an agent in a loop')
-  .requiredOption('-p, --prompt <files...>', 'Prompt files to pass to agent')
+  .argument('<prompt...>', 'Prompt files to pass to agent')
   .option('-a, --agent <agent>', 'Agent type', 'claude')
   .option('-i, --iterations <n>', 'Number of loop iterations', '4')
   .action(run)

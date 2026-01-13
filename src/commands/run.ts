@@ -4,12 +4,11 @@ import { createSession, writeLog, getSessionDir } from '../session/index.js'
 import { buildPrompt, COMPLETION_MARKER } from '../utils/index.js'
 
 export interface RunOptions {
-  prompt: string[]
   agent: string
   iterations: string
 }
 
-export async function run(opts: RunOptions): Promise<void> {
+export async function run(prompt: string[], opts: RunOptions): Promise<void> {
   // Validate agent
   if (!isValidAgent(opts.agent)) {
     console.error(chalk.red(`Unknown agent: ${opts.agent}`))
@@ -27,9 +26,9 @@ export async function run(opts: RunOptions): Promise<void> {
   const agent = getAgent(opts.agent)
 
   // Build prompt with completion instructions
-  let prompt: string
+  let builtPrompt: string
   try {
-    prompt = await buildPrompt(opts.prompt)
+    builtPrompt = await buildPrompt(prompt)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(chalk.red(`Failed to read prompt files: ${message}`))
@@ -38,7 +37,7 @@ export async function run(opts: RunOptions): Promise<void> {
 
   // Create session
   const sessionId = await createSession({
-    promptFiles: opts.prompt,
+    promptFiles: prompt,
     agent: opts.agent,
     iterations,
   })
@@ -57,7 +56,7 @@ export async function run(opts: RunOptions): Promise<void> {
     console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
     console.log()
 
-    const result = await agent.execute(prompt, process.cwd(), {
+    const result = await agent.execute(builtPrompt, process.cwd(), {
       onOutput: (chunk) => process.stdout.write(chunk),
     })
 

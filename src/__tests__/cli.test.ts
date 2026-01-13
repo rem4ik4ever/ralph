@@ -45,15 +45,15 @@ describe('CLI', () => {
   })
 
   describe('run command validation', () => {
-    it('requires --prompt option', () => {
+    it('requires prompt argument', () => {
       const { stderr, exitCode } = runCli('run')
       expect(exitCode).not.toBe(0)
-      expect(stderr).toContain('--prompt')
+      expect(stderr).toContain('prompt')
     })
 
-    it('accepts short -p flag', () => {
+    it('shows prompt as argument in help', () => {
       const { stdout } = runCli('run --help')
-      expect(stdout).toContain('-p')
+      expect(stdout).toContain('<prompt...>')
     })
 
     it('accepts short -a flag for agent', () => {
