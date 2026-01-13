@@ -14,10 +14,10 @@ Ralph wraps this pattern into a proper CLI with session logging, iteration limit
 
 ```bash
 # npm
-npm install -g ralph-cli
+npm install -g rlph-cli
 
 # or run directly
-npx ralph-cli run -p "your task"
+npx rlph-cli run -p "your task"
 ```
 
 ### From source

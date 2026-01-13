@@ -1,5 +1,5 @@
 {
-  "name": "ralph-cli",
+  "name": "rlph-cli",
   "version": "0.1.0",
   "description": "Loop coding agent CLI - run agents headlessly in a loop",
   "type": "module",
@@ -28,6 +28,10 @@
     "automation"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rem4ik4ever/ralph.git"
+  },
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
