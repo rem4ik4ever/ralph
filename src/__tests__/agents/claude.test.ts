@@ -16,6 +16,14 @@ class MockProcess extends EventEmitter {
   stderr = new EventEmitter()
 }
 
+// Helper to create stream-json formatted output
+function streamJson(text: string): string {
+  return JSON.stringify({
+    type: 'assistant',
+    message: { content: [{ type: 'text', text }] }
+  }) + '\n'
+}
+
 describe('agents/claude', () => {
   let mockProcess: MockProcess
 
@@ -35,14 +43,14 @@ describe('agents/claude', () => {
   it('spawns claude with correct args', async () => {
     const promise = claude.execute('test prompt', '/test/cwd')
 
-    mockProcess.stdout.emit('data', Buffer.from('output'))
+    mockProcess.stdout.emit('data', Buffer.from(streamJson('output')))
     mockProcess.emit('close', 0)
 
     await promise
 
     expect(spawn).toHaveBeenCalledWith(
       'claude',
-      ['-p', '--dangerously-skip-permissions'],
+      ['-p', '--dangerously-skip-permissions', '--output-format', 'stream-json', '--verbose'],
       expect.objectContaining({
         cwd: '/test/cwd',
         shell: true,
@@ -61,11 +69,11 @@ describe('agents/claude', () => {
     expect(mockProcess.stdin.end).toHaveBeenCalled()
   })
 
-  it('captures stdout', async () => {
+  it('captures stdout from stream-json', async () => {
     const promise = claude.execute('test', '/cwd')
 
-    mockProcess.stdout.emit('data', Buffer.from('hello '))
-    mockProcess.stdout.emit('data', Buffer.from('world'))
+    mockProcess.stdout.emit('data', Buffer.from(streamJson('hello ')))
+    mockProcess.stdout.emit('data', Buffer.from(streamJson('world')))
     mockProcess.emit('close', 0)
 
     const result = await promise
@@ -76,7 +84,7 @@ describe('agents/claude', () => {
   it('captures stderr', async () => {
     const promise = claude.execute('test', '/cwd')
 
-    mockProcess.stdout.emit('data', Buffer.from('out'))
+    mockProcess.stdout.emit('data', Buffer.from(streamJson('out')))
     mockProcess.stderr.emit('data', Buffer.from('err'))
     mockProcess.emit('close', 0)
 
