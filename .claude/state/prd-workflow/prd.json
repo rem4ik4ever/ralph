@@ -49,7 +49,7 @@
         "Uses $PRD_NAME, $PRD_PATH, $CWD variables",
         "Includes <tasks>COMPLETE</tasks> completion marker instruction"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "manager-1",

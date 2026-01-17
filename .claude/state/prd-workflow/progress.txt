@@ -24,3 +24,9 @@ Started: 2026-01-16
 - Instructs agent to output only JSON
 - Files: templates/prd-md-to-json.md
 - **Learnings:** Bundled templates live in templates/ dir (not src/templates/)
+
+## Task - templates-3
+- Created complete-next-task.md template
+- Files: templates/complete-next-task.md
+- Includes all process steps, variables ($PRD_NAME, $PRD_PATH, $CWD), and completion marker
+- **Learnings:** Pre-existing test failures are unrelated to template work
