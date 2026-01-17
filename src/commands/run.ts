@@ -44,9 +44,11 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
   // Load and substitute template
   await ensureTemplates()
   const template = await loadTemplate('complete-next-task')
+  const prdMdPath = join(prdDir, 'prd.md')
   const prompt = substituteVars(template, {
     PRD_NAME: prdName,
     PRD_PATH: prdJsonPath,
+    PRD_MD_PATH: prdMdPath,
     CWD: process.cwd(),
   })
 

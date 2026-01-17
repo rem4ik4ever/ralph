@@ -133,6 +133,7 @@ describe('commands/run', () => {
     expect(templates.substituteVars).toHaveBeenCalledWith('template content', {
       PRD_NAME: 'test-prd',
       PRD_PATH: '/home/.ralph/prd/test-prd/prd.json',
+      PRD_MD_PATH: '/home/.ralph/prd/test-prd/prd.md',
       CWD: expect.any(String),
     })
   })

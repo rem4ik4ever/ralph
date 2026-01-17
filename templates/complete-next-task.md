@@ -6,6 +6,7 @@ Complete the next incomplete task from a PRD.
 
 - PRD Name: `$PRD_NAME`
 - PRD Path: `$PRD_PATH`
+- PRD Markdown: `$PRD_MD_PATH`
 - Working Directory: `$CWD`
 
 ## Process
@@ -13,7 +14,8 @@ Complete the next incomplete task from a PRD.
 ### 1. Get Bearings
 
 - Read progress file at `$PRD_PATH/../progress.txt` - check "Codebase Patterns" section first
-- Read PRD at `$PRD_PATH` - find next task with `passes: false`
+- Read PRD markdown at `$PRD_MD_PATH` for full context and intent
+- Read PRD JSON at `$PRD_PATH` - find next task with `passes: false`
 - Check recent git history: `git log --oneline -10`
 
 ### 2. Branch Setup
