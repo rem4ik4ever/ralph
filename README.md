@@ -1,14 +1,8 @@
 # Ralph
 
-Loop coding agent CLI - run AI coding agents headlessly in a loop.
+PRD-based task tracking CLI for AI coding agents. Run agents headlessly with structured task tracking and progress visibility.
 
 Inspired by [Geoff Huntley's ralph technique](https://ghuntley.com/ralph/) - putting a coding agent in a while loop and letting it work autonomously.
-
-```bash
-while :; do cat prompt.md | claude -p; done
-```
-
-Ralph wraps this pattern into a proper CLI with session logging, iteration limits, and automatic task completion detection.
 
 ## Installation
 
@@ -17,7 +11,7 @@ Ralph wraps this pattern into a proper CLI with session logging, iteration limit
 npm install -g rlph-cli
 
 # or run directly
-npx rlph-cli run -p "your task"
+npx rlph-cli prd add my-feature.md my-feature
 ```
 
 ### From source
@@ -32,60 +26,73 @@ bun link
 
 ## Usage
 
+### Add a PRD
+
+Convert markdown PRD to trackable JSON tasks:
+
 ```bash
-ralph run -p <prompt> [-a agent] [-i iterations]
+ralph prd add <path> <name> [--agent claude]
 ```
 
-### Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-p, --prompt <files...>` | Prompt text or files to pass to agent | required |
-| `-a, --agent <agent>` | Agent type (currently: claude) | `claude` |
-| `-i, --iterations <n>` | Max loop iterations | `4` |
-
-### Examples
-
-**Simple task**
+Example:
 ```bash
-ralph run -p "fix the login bug" -i 3
+ralph prd add feature.md my-feature
 ```
 
-**Using a prompt file**
+Creates `~/.ralph/prd/my-feature/` with:
+- `prd.md` - original markdown
+- `prd.json` - converted tasks with pass/fail tracking
+- `progress.txt` - cross-iteration memory
+
+### List PRDs
+
+View all PRDs with status:
+
 ```bash
-ralph run -p prompt.md -i 10
+ralph prd list
 ```
 
-**Multiple prompts/files**
-```bash
-ralph run -p task.md context.md "also add tests"
+Output:
+```
+1. my-feature - Add login flow - in_progress (3/7)
+2. refactor-api - API cleanup - pending (0/4)
 ```
 
-**Long running task**
+### Run PRD
+
+Execute agent loop against a PRD:
+
 ```bash
-ralph run -p "port this codebase from React to Vue" -i 50
+ralph run <prd-name> [--agent claude] [--iterations 4]
 ```
+
+Example:
+```bash
+ralph run my-feature -i 10
+```
+
+Agent picks up next incomplete task, implements it, runs feedback loops (tests/lint/types), marks task passed, repeats until done.
 
 ## How it works
 
-1. Ralph reads your prompt (text or files)
-2. Appends completion instructions asking agent to output `<ralph>RALPH_COMPLETED</ralph>` when done
-3. Runs the agent in a loop up to N iterations
-4. Streams output in real-time
-5. Stops early if agent signals completion
-6. Logs each iteration to `~/.ralph/sessions/<session-id>/`
+1. Write markdown PRD with tasks and verification steps
+2. `ralph prd add` converts to JSON with agent
+3. `ralph run` loops agent against PRD tasks
+4. Agent updates `prd.json` passes field on completion
+5. Agent maintains `progress.txt` with learnings across iterations
+6. Stops when all tasks pass or max iterations reached
+7. Logs each iteration to `~/.ralph/prd/<name>/iterations/`
 
-## Session logs
-
-All sessions are logged to `~/.ralph/sessions/`:
+## PRD folder structure
 
 ```
-~/.ralph/sessions/
-  └── <session-id>/
-      ├── meta.json    # session metadata
-      ├── 0.log        # iteration 0 output
-      ├── 1.log        # iteration 1 output
-      └── ...
+~/.ralph/prd/<name>/
+├── prd.md        # Original markdown
+├── prd.json      # Tasks with passes field
+├── progress.txt  # Cross-iteration memory
+└── iterations/   # Iteration logs
+    ├── 0.json
+    └── ...
 ```
 
 ## Supported agents
