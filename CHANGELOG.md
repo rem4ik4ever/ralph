@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/rem4ik4ever/ralph/compare/v1.2.0...v1.2.1) (2026-01-17)
+
+### Bug Fixes
+
+* **prd:** copyMarkdown uses write mode, add missing tests ([492ef76](https://github.com/rem4ik4ever/ralph/commit/492ef76ca6ce45af4ad50bd2ac3d3835071446a6))
+* **prd:** local-first resolution for PRD creation ([ef8b6e2](https://github.com/rem4ik4ever/ralph/commit/ef8b6e271c8dc7fdaaaad35ae524c31cbaa83703))
+
 ## [1.2.0](https://github.com/rem4ik4ever/ralph/compare/v1.1.0...v1.2.0) (2026-01-17)
 
 ### Features
