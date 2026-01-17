@@ -1,8 +1,21 @@
 import chalk from 'chalk'
 import { select, confirm } from '@inquirer/prompts'
 import { access, mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import type { AgentType, InitConfig } from '../prd/types.js'
+import {
+  getClaudeDir,
+  getSourceSkillPath,
+  getSourceCommandPath,
+  getTargetSkillDir,
+  getTargetSkillPath,
+  getTargetCommandPath,
+  readSourceSkill,
+  readSourceCommand,
+  transformSkillContent,
+  transformCommandContent,
+  SourceFileNotFoundError,
+} from '../init/index.js'
 
 export interface InitOptions {
   agent?: AgentType
@@ -135,6 +148,89 @@ export async function writeConfig(agent: AgentType): Promise<void> {
       console.error(chalk.red(`Permission denied: Cannot write ${configPath}`))
     } else {
       console.error(chalk.red(`Failed to write config: ${error.message}`))
+    }
+    throw err
+  }
+}
+
+export async function installClaudeSkills(): Promise<void> {
+  const claudeDir = getClaudeDir()
+  const skillsDir = join(claudeDir, 'skills')
+  const commandsDir = join(claudeDir, 'commands')
+
+  // Create directories if they don't exist
+  try {
+    await mkdir(skillsDir, { recursive: true })
+    await mkdir(commandsDir, { recursive: true })
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException
+    console.error(chalk.red(`Failed to create Claude directories: ${error.message}`))
+    throw err
+  }
+
+  // Read and transform skill
+  let skillContent: string
+  try {
+    skillContent = await readSourceSkill()
+  } catch (err) {
+    if (err instanceof SourceFileNotFoundError) {
+      console.error(chalk.red(`Source skill not found: ${getSourceSkillPath()}`))
+      console.error(chalk.gray('Install the prd skill globally first:'))
+      console.error(chalk.gray('  mkdir -p ~/.claude/skills/prd'))
+      console.error(chalk.gray('  # Copy SKILL.md to ~/.claude/skills/prd/'))
+      throw err
+    }
+    throw err
+  }
+
+  const transformedSkill = transformSkillContent(skillContent)
+
+  // Read and transform command
+  let commandContent: string
+  try {
+    commandContent = await readSourceCommand()
+  } catch (err) {
+    if (err instanceof SourceFileNotFoundError) {
+      console.error(chalk.red(`Source command not found: ${getSourceCommandPath()}`))
+      console.error(chalk.gray('Install the complete-next-task command globally first:'))
+      console.error(chalk.gray('  # Copy complete-next-task.md to ~/.claude/commands/'))
+      throw err
+    }
+    throw err
+  }
+
+  const transformedCommand = transformCommandContent(commandContent)
+
+  // Write transformed skill
+  const targetSkillDir = getTargetSkillDir()
+  const targetSkillPath = getTargetSkillPath()
+
+  try {
+    await mkdir(targetSkillDir, { recursive: true })
+    await writeFile(targetSkillPath, transformedSkill)
+    console.log(chalk.green(`✓ Installed skill: ${targetSkillPath}`))
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException
+    if (error.code === 'EACCES') {
+      console.error(chalk.red(`Permission denied: Cannot write ${targetSkillPath}`))
+    } else {
+      console.error(chalk.red(`Failed to install skill: ${error.message}`))
+    }
+    throw err
+  }
+
+  // Write transformed command
+  const targetCommandPath = getTargetCommandPath()
+
+  try {
+    await writeFile(targetCommandPath, transformedCommand)
+    console.log(chalk.green(`✓ Installed command: ${targetCommandPath}`))
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException
+    if (error.code === 'EACCES') {
+      console.error(chalk.red(`Permission denied: Cannot write ${targetCommandPath}`))
+    } else {
+      console.error(chalk.red(`Failed to install command: ${error.message}`))
     }
     throw err
   }
