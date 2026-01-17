@@ -83,7 +83,7 @@
         "Prints summary with task count",
         "Unit tests pass"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "cmd-list-1",

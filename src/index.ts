@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { program } from 'commander'
 import { run } from './commands/run.js'
+import { prdAdd } from './commands/prd-add.js'
 
 program
   .name('ralph')
@@ -14,5 +15,15 @@ program
   .option('-a, --agent <agent>', 'Agent type', 'claude')
   .option('-i, --iterations <n>', 'Number of loop iterations', '4')
   .action(run)
+
+const prd = program.command('prd').description('Manage PRDs')
+
+prd
+  .command('add')
+  .description('Add a new PRD from markdown file')
+  .argument('<path>', 'Path to PRD markdown file')
+  .argument('<name>', 'Name for the PRD')
+  .option('-a, --agent <agent>', 'Agent type', 'claude')
+  .action(prdAdd)
 
 program.parse()

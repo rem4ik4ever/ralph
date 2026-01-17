@@ -37,3 +37,10 @@ Started: 2026-01-16
 - Functions: getPrdsDir, getPrdDir, prdExists, createPrdFolder, copyMarkdown, getPrd, listPrds
 - All 12 unit tests pass
 - **Learnings:** computeStatus helper computes pending/in_progress/completed from task.passes counts
+
+## Task - cmd-add-1
+- Created prd add command with validation, agent execution, json verification
+- Files: src/commands/prd-add.ts, src/__tests__/commands/prd-add.test.ts, src/index.ts
+- Registered prd command group with add subcommand in CLI entry point
+- All 13 unit tests pass
+- **Learnings:** Commander.js supports nested command groups via program.command().command()
