@@ -11,7 +11,7 @@
         "PrdStatus interface with name, description, status, tasksTotal, tasksCompleted",
         "Types exported from src/prd/types.ts"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "templates-1",

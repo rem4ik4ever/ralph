@@ -3,7 +3,12 @@ PRD: prd-workflow
 Started: 2026-01-16
 
 ## Codebase Patterns
-<!-- Consolidate reusable patterns here -->
+- ESM imports require `.js` extension (e.g., `export * from './types.js'`)
 
 ---
 <!-- Task logs below - APPEND ONLY -->
+
+## Task - types-1
+- Created PrdTask, PrdJson, PrdStatus interfaces
+- Files: src/prd/types.ts, src/prd/index.ts
+- **Learnings:** Need .js extension for ESM re-exports
