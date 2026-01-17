@@ -163,7 +163,7 @@
         "sample-prd.json - expected JSON output",
         "Fixtures in src/__tests__/fixtures/"
       ],
-      "passes": false
+      "passes": true
     }
   ],
   "context": {

@@ -86,3 +86,9 @@ Started: 2026-01-16
 - 4 tests: workflow flow, COMPLETE marker, completed status, empty folder
 - All 93 tests pass
 - **Learnings:** vi.mock() must list all functions to mock; dynamic imports can leak mocks between tests
+
+## Task - fixtures-1
+- Created sample-prd.md: user auth PRD with 3 tasks
+- Created sample-prd.json: expected JSON output matching prd-md-to-json conversion
+- Files at src/__tests__/fixtures/
+- **Learnings:** Fixtures can be used by future tests to verify template conversion
