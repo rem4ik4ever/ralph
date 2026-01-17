@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/rem4ik4ever/ralph/compare/v1.0.0...v1.1.0) (2026-01-17)
+
+### Features
+
+* **run:** add PRD_MD_PATH to agent prompt ([52c389a](https://github.com/rem4ik4ever/ralph/commit/52c389ac56a86b304708e8a66ea94be047650f04))
+
 ## 1.0.0 (2026-01-17)
 
 ### Features
