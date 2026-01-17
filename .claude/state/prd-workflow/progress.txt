@@ -77,3 +77,12 @@ Started: 2026-01-16
 - Updated src/utils/index.ts to export only ndjson.js
 - Build passes, 89 tests pass
 - **Learnings:** Session module was never used by run.ts (has own writeIterationLog)
+
+## Task - integration-1
+- Created integration test at src/__tests__/integration/prd-workflow.test.ts
+- Tests add → list → run → list flow with status progression (pending → in_progress)
+- Uses temp directories with mkdtemp/rm for isolation
+- Mocks agent execution via vi.mock()
+- 4 tests: workflow flow, COMPLETE marker, completed status, empty folder
+- All 93 tests pass
+- **Learnings:** vi.mock() must list all functions to mock; dynamic imports can leak mocks between tests

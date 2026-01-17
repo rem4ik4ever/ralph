@@ -152,7 +152,7 @@
         "Mocks agent execution",
         "Verifies status changes after run"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "fixtures-1",
