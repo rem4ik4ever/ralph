@@ -30,3 +30,10 @@ Started: 2026-01-16
 - Files: templates/complete-next-task.md
 - Includes all process steps, variables ($PRD_NAME, $PRD_PATH, $CWD), and completion marker
 - **Learnings:** Pre-existing test failures are unrelated to template work
+
+## Task - manager-1
+- Created PRD manager with CRUD operations
+- Files: src/prd/manager.ts, src/prd/index.ts, src/__tests__/prd/manager.test.ts
+- Functions: getPrdsDir, getPrdDir, prdExists, createPrdFolder, copyMarkdown, getPrd, listPrds
+- All 12 unit tests pass
+- **Learnings:** computeStatus helper computes pending/in_progress/completed from task.passes counts

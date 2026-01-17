@@ -65,7 +65,7 @@
         "listPrds() scans directories and computes status",
         "Unit tests pass for all manager functions"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "cmd-add-1",
