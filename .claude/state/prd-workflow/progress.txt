@@ -17,3 +17,10 @@ Started: 2026-01-16
 - Implemented template system: ensureTemplates(), loadTemplate(), substituteVars()
 - Files: src/templates/templates.ts, src/templates/index.ts, src/__tests__/templates/templates.test.ts
 - **Learnings:** getBundledTemplatesDir() uses import.meta.url for ESM compat
+
+## Task - templates-2
+- prd-md-to-json.md template already existed at templates/prd-md-to-json.md
+- Template includes JSON schema, conversion rules, $PRD_PATH/$OUTPUT_PATH vars
+- Instructs agent to output only JSON
+- Files: templates/prd-md-to-json.md
+- **Learnings:** Bundled templates live in templates/ dir (not src/templates/)

@@ -37,7 +37,7 @@
         "Uses $PRD_PATH and $OUTPUT_PATH variables",
         "Instructs agent to output only JSON"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "templates-3",
