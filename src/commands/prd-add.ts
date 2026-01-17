@@ -35,7 +35,7 @@ export async function prdAdd(
     process.exit(1)
   }
 
-  const prdDir = getPrdDir(name)
+  const prdDir = await getPrdDir(name)
   const prdJsonPath = join(prdDir, 'prd.json')
   const progressPath = join(prdDir, 'progress.txt')
 

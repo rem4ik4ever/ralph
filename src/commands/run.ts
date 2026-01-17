@@ -34,7 +34,7 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
   }
 
   const prd = await getPrd(prdName)
-  const prdDir = getPrdDir(prdName)
+  const prdDir = await getPrdDir(prdName)
   const prdJsonPath = join(prdDir, 'prd.json')
   const iterationsDir = join(prdDir, 'iterations')
 

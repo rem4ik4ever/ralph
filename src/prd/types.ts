@@ -1,3 +1,10 @@
+export type AgentType = 'claude' | 'codex' | 'opencode'
+
+export interface InitConfig {
+  agent: AgentType
+  initialized: string
+}
+
 export interface PrdTask {
   id: string
   category: string
