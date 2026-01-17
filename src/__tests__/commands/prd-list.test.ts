@@ -34,6 +34,7 @@ describe('commands/prd-list', () => {
         status: 'pending',
         tasksTotal: 5,
         tasksCompleted: 0,
+        location: 'global',
       },
     ])
 
@@ -43,6 +44,7 @@ describe('commands/prd-list', () => {
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('DESCRIPTION'))
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('STATUS'))
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('PROGRESS'))
+    expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('LOCATION'))
   })
 
   it('displays PRD data in rows', async () => {
@@ -53,6 +55,7 @@ describe('commands/prd-list', () => {
         status: 'in_progress',
         tasksTotal: 10,
         tasksCompleted: 3,
+        location: 'local',
       },
     ])
 
@@ -64,6 +67,7 @@ describe('commands/prd-list', () => {
     expect(dataRow).toContain('my-prd')
     expect(dataRow).toContain('My PRD description')
     expect(dataRow).toContain('3/10')
+    expect(dataRow).toContain('local')
   })
 
   it('handles multiple PRDs', async () => {
@@ -74,6 +78,7 @@ describe('commands/prd-list', () => {
         status: 'completed',
         tasksTotal: 3,
         tasksCompleted: 3,
+        location: 'local',
       },
       {
         name: 'prd-two',
@@ -81,6 +86,7 @@ describe('commands/prd-list', () => {
         status: 'pending',
         tasksTotal: 5,
         tasksCompleted: 0,
+        location: 'global',
       },
     ])
 
@@ -99,6 +105,7 @@ describe('commands/prd-list', () => {
         status: 'pending',
         tasksTotal: 1,
         tasksCompleted: 0,
+        location: 'global',
       },
     ])
 

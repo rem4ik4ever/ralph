@@ -2,7 +2,13 @@ import chalk from 'chalk'
 import { access, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getAgent, isValidAgent } from '../agents/index.js'
-import { createPrdFolder, copyMarkdown, getPrdDir, prdExists } from '../prd/index.js'
+import {
+  createPrdFolder,
+  copyMarkdown,
+  getPrdDir,
+  isProjectInitialized,
+  prdExists,
+} from '../prd/index.js'
 import { ensureTemplates, loadTemplate, substituteVars } from '../templates/index.js'
 
 export interface PrdAddOptions {
@@ -29,13 +35,17 @@ export async function prdAdd(
     process.exit(1)
   }
 
-  // Check if PRD already exists
-  if (await prdExists(name)) {
-    console.error(chalk.red(`PRD already exists: ${name}`))
+  // Check if PRD already exists in target location
+  // For initialized projects, only check local; otherwise check global
+  const isInitialized = await isProjectInitialized()
+  const checkLocation = isInitialized ? 'local' : 'global'
+  if (await prdExists(name, checkLocation)) {
+    const locationLabel = isInitialized ? 'local' : 'global'
+    console.error(chalk.red(`PRD already exists (${locationLabel}): ${name}`))
     process.exit(1)
   }
 
-  const prdDir = await getPrdDir(name)
+  const prdDir = await getPrdDir(name, 'write')
   const prdJsonPath = join(prdDir, 'prd.json')
   const progressPath = join(prdDir, 'progress.txt')
 

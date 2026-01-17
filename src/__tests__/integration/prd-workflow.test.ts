@@ -20,6 +20,7 @@ vi.mock('../../prd/manager.js', () => ({
   copyMarkdown: vi.fn(),
   getPrd: vi.fn(),
   listPrds: vi.fn(),
+  isProjectInitialized: vi.fn(),
 }))
 
 vi.mock('../../templates/templates.js', () => ({
@@ -53,7 +54,8 @@ describe('integration/prd-workflow', () => {
 
     // Configure getPrdsDir/getPrdDir mocks
     vi.mocked(prdManager.getPrdsDir).mockReturnValue(tempDir)
-    vi.mocked(prdManager.getPrdDir).mockImplementation((name: string) => join(tempDir, name))
+    vi.mocked(prdManager.getPrdDir).mockImplementation(async (name: string) => join(tempDir, name))
+    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(false)
 
     // Mock agent
     mockAgent = {

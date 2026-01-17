@@ -25,10 +25,15 @@ export interface PrdJson {
 
 export type PrdStatusType = 'pending' | 'in_progress' | 'completed'
 
+export type PrdLocation = 'local' | 'global' | 'auto'
+
+export type PrdDirMode = 'read' | 'write'
+
 export interface PrdStatus {
   name: string
   description: string
   status: PrdStatusType
   tasksTotal: number
   tasksCompleted: number
+  location: 'local' | 'global'
 }

@@ -13,6 +13,10 @@ function statusColor(status: PrdStatusType): string {
   }
 }
 
+function locationColor(location: 'local' | 'global'): string {
+  return location === 'local' ? chalk.cyan(location) : chalk.gray(location)
+}
+
 export async function prdList(): Promise<void> {
   const prds = await listPrds()
 
@@ -26,6 +30,7 @@ export async function prdList(): Promise<void> {
   const descWidth = Math.min(40, Math.max(11, ...prds.map((p) => p.description.length)))
   const statusWidth = 11
   const progressWidth = 8
+  const locationWidth = 6
 
   // Header
   console.log(
@@ -36,7 +41,9 @@ export async function prdList(): Promise<void> {
         '  ' +
         'STATUS'.padEnd(statusWidth) +
         '  ' +
-        'PROGRESS'
+        'PROGRESS'.padStart(progressWidth) +
+        '  ' +
+        'LOCATION'
     )
   )
 
@@ -55,7 +62,9 @@ export async function prdList(): Promise<void> {
         '  ' +
         statusColor(prd.status).padEnd(statusWidth + 10) + // extra for ansi codes
         '  ' +
-        progress.padStart(progressWidth)
+        progress.padStart(progressWidth) +
+        '  ' +
+        locationColor(prd.location)
     )
   }
 }

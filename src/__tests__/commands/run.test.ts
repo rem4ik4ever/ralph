@@ -52,7 +52,7 @@ describe('commands/run', () => {
     vi.mocked(agents.getAgent).mockReturnValue(mockAgent)
     vi.mocked(prdManager.prdExists).mockResolvedValue(true)
     vi.mocked(prdManager.getPrd).mockResolvedValue(mockPrd)
-    vi.mocked(prdManager.getPrdDir).mockReturnValue('/home/.ralph/prd/test-prd')
+    vi.mocked(prdManager.getPrdDir).mockResolvedValue('/home/.ralph/prd/test-prd')
     vi.mocked(templates.ensureTemplates).mockResolvedValue(undefined)
     vi.mocked(templates.loadTemplate).mockResolvedValue('template content')
     vi.mocked(templates.substituteVars).mockReturnValue('substituted prompt')
