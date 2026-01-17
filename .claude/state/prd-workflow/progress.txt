@@ -12,3 +12,8 @@ Started: 2026-01-16
 - Created PrdTask, PrdJson, PrdStatus interfaces
 - Files: src/prd/types.ts, src/prd/index.ts
 - **Learnings:** Need .js extension for ESM re-exports
+
+## Task - templates-1
+- Implemented template system: ensureTemplates(), loadTemplate(), substituteVars()
+- Files: src/templates/templates.ts, src/templates/index.ts, src/__tests__/templates/templates.test.ts
+- **Learnings:** getBundledTemplatesDir() uses import.meta.url for ESM compat

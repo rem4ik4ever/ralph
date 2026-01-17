@@ -24,7 +24,7 @@
         "substituteVars(template, vars) replaces $VAR with values",
         "Unit tests pass for all template functions"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "templates-2",
