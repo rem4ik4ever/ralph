@@ -1,5 +1,9 @@
 import { spawn } from 'node:child_process'
+import chalk from 'chalk'
 import type { Agent, AgentResult, ExecuteOptions } from './base.js'
+import { NDJSONParser } from '../utils/ndjson.js'
+import { formatEvent } from './claude-formatter.js'
+import type { StreamEvent } from './claude-events.js'
 
 export const claude: Agent = {
   name: 'claude',
@@ -11,26 +15,50 @@ export const claude: Agent = {
     return new Promise((resolve, reject) => {
       const proc = spawn('claude', [
         '-p',
+        '--verbose',
         '--dangerously-skip-permissions',
+        '--output-format', 'stream-json',
       ], {
         cwd,
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: true,
       })
 
-      let output = ''
+      let rawOutput = ''
+      let textOutput = ''
       let stderr = ''
+
+      const parser = new NDJSONParser<StreamEvent>(
+        (event) => {
+          const formatted = formatEvent(event)
+          if (formatted) {
+            onOutput?.(formatted + '\n')
+          }
+
+          // Accumulate text content for completion marker detection
+          if (event.type === 'assistant') {
+            for (const block of event.message.content) {
+              if (block.type === 'text') {
+                textOutput += block.text
+              }
+            }
+          }
+        },
+        (_error, line) => {
+          onOutput?.(chalk.yellow(`[warn] malformed JSON: ${line.slice(0, 100)}\n`))
+        }
+      )
 
       proc.stdout.on('data', (data: Buffer) => {
         const chunk = data.toString()
-        output += chunk
-        onOutput?.(chunk)
+        rawOutput += chunk
+        parser.push(chunk)
       })
 
       proc.stderr.on('data', (data: Buffer) => {
         const chunk = data.toString()
         stderr += chunk
-        onOutput?.(chunk)
+        onOutput?.(chalk.red(chunk))
       })
 
       proc.on('error', (err) => {
@@ -38,9 +66,10 @@ export const claude: Agent = {
       })
 
       proc.on('close', (code) => {
+        parser.flush()
         const duration = Date.now() - startTime
         resolve({
-          output: output + (stderr ? `\n[stderr]\n${stderr}` : ''),
+          output: textOutput + (stderr ? `\n[stderr]\n${stderr}` : ''),
           exitCode: code ?? 1,
           duration,
         })

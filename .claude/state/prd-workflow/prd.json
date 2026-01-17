@@ -1,0 +1,188 @@
+{
+  "prdName": "prd-workflow",
+  "tasks": [
+    {
+      "id": "types-1",
+      "category": "types",
+      "description": "Create PRD type definitions",
+      "steps": [
+        "PrdTask interface with id, category, description, steps, passes",
+        "PrdJson interface with prdName, tasks, context",
+        "PrdStatus interface with name, description, status, tasksTotal, tasksCompleted",
+        "Types exported from src/prd/types.ts"
+      ],
+      "passes": false
+    },
+    {
+      "id": "templates-1",
+      "category": "templates",
+      "description": "Create template system for loading/initializing templates",
+      "steps": [
+        "ensureTemplates() creates ~/.ralph/templates/ if missing",
+        "ensureTemplates() copies bundled templates to ~/.ralph/templates/",
+        "loadTemplate(name) reads template from ~/.ralph/templates/",
+        "substituteVars(template, vars) replaces $VAR with values",
+        "Unit tests pass for all template functions"
+      ],
+      "passes": false
+    },
+    {
+      "id": "templates-2",
+      "category": "templates",
+      "description": "Create prd-md-to-json.md template",
+      "steps": [
+        "Template at src/templates/prd-md-to-json.md",
+        "Includes JSON schema for PRD output",
+        "Includes conversion rules from prd-task skill",
+        "Uses $PRD_PATH and $OUTPUT_PATH variables",
+        "Instructs agent to output only JSON"
+      ],
+      "passes": false
+    },
+    {
+      "id": "templates-3",
+      "category": "templates",
+      "description": "Create complete-next-task.md template",
+      "steps": [
+        "Template at src/templates/complete-next-task.md",
+        "Includes process steps: get bearings, branch, implement, feedback, update, commit",
+        "Uses $PRD_NAME, $PRD_PATH, $CWD variables",
+        "Includes <tasks>COMPLETE</tasks> completion marker instruction"
+      ],
+      "passes": false
+    },
+    {
+      "id": "manager-1",
+      "category": "manager",
+      "description": "Create PRD manager for CRUD operations",
+      "steps": [
+        "getPrdsDir() returns ~/.ralph/prd",
+        "getPrdDir(name) returns ~/.ralph/prd/<name>",
+        "prdExists(name) checks if prd folder exists",
+        "createPrdFolder(name) creates directory structure",
+        "copyMarkdown(src, name) copies md to prd.md",
+        "getPrd(name) reads and parses prd.json",
+        "listPrds() scans directories and computes status",
+        "Unit tests pass for all manager functions"
+      ],
+      "passes": false
+    },
+    {
+      "id": "cmd-add-1",
+      "category": "command",
+      "description": "Create ralph prd add command",
+      "steps": [
+        "Command registered: ralph prd add <path> <name> [--agent]",
+        "Validates markdown file exists",
+        "Creates ~/.ralph/prd/<name>/ folder",
+        "Copies markdown to prd.md",
+        "Loads prd-md-to-json.md template",
+        "Calls agent with template prompt",
+        "Validates prd.json created after agent run",
+        "Creates empty progress.txt",
+        "Prints summary with task count",
+        "Unit tests pass"
+      ],
+      "passes": false
+    },
+    {
+      "id": "cmd-list-1",
+      "category": "command",
+      "description": "Create ralph prd list command",
+      "steps": [
+        "Command registered: ralph prd list",
+        "Scans ~/.ralph/prd/*/",
+        "Computes status: pending/in_progress/completed",
+        "Prints formatted table with name, description, status, progress",
+        "Handles empty prd folder gracefully",
+        "Unit tests pass"
+      ],
+      "passes": false
+    },
+    {
+      "id": "cmd-run-1",
+      "category": "command",
+      "description": "Rewrite ralph run for PRD-only mode",
+      "steps": [
+        "Command signature: ralph run <prd-name> [--agent] [--iterations]",
+        "Old prompt-files mode removed",
+        "Validates PRD exists",
+        "Loads PRD from ~/.ralph/prd/<name>/prd.json",
+        "Loads complete-next-task.md template",
+        "Substitutes variables in template",
+        "Saves iteration logs to ~/.ralph/prd/<name>/iterations/",
+        "Stops on <tasks>COMPLETE</tasks> marker",
+        "Unit tests rewritten for PRD mode"
+      ],
+      "passes": false
+    },
+    {
+      "id": "cli-1",
+      "category": "cli",
+      "description": "Update CLI entry point",
+      "steps": [
+        "Register prd command group in src/index.ts",
+        "prd add subcommand registered",
+        "prd list subcommand registered",
+        "run command updated to PRD-only signature",
+        "ralph prd --help shows subcommands"
+      ],
+      "passes": false
+    },
+    {
+      "id": "cleanup-1",
+      "category": "cleanup",
+      "description": "Remove deprecated code",
+      "steps": [
+        "Remove COMPLETION_MARKER from src/utils/files.ts",
+        "Remove buildPrompt if unused",
+        "Remove old session folder logic if unused",
+        "Update exports in index files"
+      ],
+      "passes": false
+    },
+    {
+      "id": "integration-1",
+      "category": "testing",
+      "description": "Create integration test for full PRD workflow",
+      "steps": [
+        "Test at src/__tests__/integration/prd-workflow.test.ts",
+        "Tests add → list → run → list flow",
+        "Uses temp directories",
+        "Mocks agent execution",
+        "Verifies status changes after run"
+      ],
+      "passes": false
+    },
+    {
+      "id": "fixtures-1",
+      "category": "testing",
+      "description": "Create test fixtures",
+      "steps": [
+        "sample-prd.md - valid PRD markdown",
+        "sample-prd.json - expected JSON output",
+        "Fixtures in src/__tests__/fixtures/"
+      ],
+      "passes": false
+    }
+  ],
+  "context": {
+    "patterns": [
+      "CLI commands: src/commands/<name>.ts",
+      "Tests: src/__tests__/<module>/<name>.test.ts",
+      "Agent interface: src/agents/base.ts",
+      "Session manager: src/session/manager.ts"
+    ],
+    "keyFiles": [
+      "src/index.ts",
+      "src/commands/run.ts",
+      "src/session/manager.ts",
+      "src/agents/claude.ts"
+    ],
+    "nonGoals": [
+      "Manual PRD parsing (agent does conversion)",
+      "Multiple VCS support (git only for now)",
+      "Old prompt-files run mode"
+    ]
+  }
+}
