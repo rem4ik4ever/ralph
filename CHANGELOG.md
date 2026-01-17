@@ -1,3 +1,16 @@
+## [1.2.0](https://github.com/rem4ik4ever/ralph/compare/v1.1.0...v1.2.0) (2026-01-17)
+
+### Features
+
+* **cli:** register init command ([7da3a9e](https://github.com/rem4ik4ever/ralph/commit/7da3a9e40db0c931352c49b395487a11570751f1))
+* **init:** add Claude skill/command installation ([0c3bb73](https://github.com/rem4ik4ever/ralph/commit/0c3bb73dd6e270543ff6cd599b04013b960da100))
+* **init:** add directory and config creation ([e1354c2](https://github.com/rem4ik4ever/ralph/commit/e1354c21f73e1abec47f782d546f42b01e8ab65c))
+* **init:** add interactive prompts with @inquirer/prompts ([2fe89f6](https://github.com/rem4ik4ever/ralph/commit/2fe89f6aa03ebc7c25fbcfdb3e2478463cfa412e))
+* **init:** add main init function with re-init handling ([e2d621b](https://github.com/rem4ik4ever/ralph/commit/e2d621b94b3fc7b449f26829cadc0e556426f771))
+* **init:** add template read/transform functions ([deb5a48](https://github.com/rem4ik4ever/ralph/commit/deb5a48e05fcbe551a3619ee00ac81135b32a85a))
+* **manager:** local-first PRD resolution ([ed126ea](https://github.com/rem4ik4ever/ralph/commit/ed126ea0b52e32b8c4715b7d45685ce8e8f79db3))
+* **types:** add AgentType and InitConfig for init command ([0b42b5f](https://github.com/rem4ik4ever/ralph/commit/0b42b5f76552ce9886e2d85675d6194952f87b45))
+
 ## [1.1.0](https://github.com/rem4ik4ever/ralph/compare/v1.0.0...v1.1.0) (2026-01-17)
 
 ### Features
