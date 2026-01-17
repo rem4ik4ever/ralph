@@ -235,3 +235,46 @@ export async function installClaudeSkills(): Promise<void> {
     throw err
   }
 }
+
+export async function init(): Promise<void> {
+  // Check for existing initialization
+  if (await ralphDirExists()) {
+    const overwrite = await promptOverwrite()
+    if (overwrite === null) {
+      // Ctrl+C
+      return
+    }
+    if (!overwrite) {
+      console.log(chalk.gray('Initialization cancelled'))
+      return
+    }
+  }
+
+  // Run prompts
+  const result = await runInitPrompts()
+  if (result.aborted) {
+    return
+  }
+
+  // Create project directories
+  await createProjectDirs()
+
+  // Install skills if requested
+  if (result.installSkills) {
+    await installClaudeSkills()
+  }
+
+  // Write config
+  await writeConfig(result.agent)
+
+  // Success message
+  console.log()
+  console.log(chalk.cyan('Next steps:'))
+  if (result.agent === 'claude' && result.installSkills) {
+    console.log(chalk.gray('  1. Create a PRD: /ralph-prd <feature-name>'))
+    console.log(chalk.gray('  2. Run tasks: /ralph-complete-next-task <prd-name>'))
+  } else {
+    console.log(chalk.gray('  1. Create PRDs in .ralph/prd/'))
+    console.log(chalk.gray('  2. Run: ralph run <prd-name>'))
+  }
+}
