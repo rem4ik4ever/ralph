@@ -101,7 +101,7 @@ export async function createPrdFolder(
 }
 
 export async function copyMarkdown(src: string, name: string): Promise<void> {
-  const prdDir = await getPrdDir(name)
+  const prdDir = await getPrdDir(name, 'write')
   const dest = join(prdDir, 'prd.md')
   await copyFile(src, dest)
 }

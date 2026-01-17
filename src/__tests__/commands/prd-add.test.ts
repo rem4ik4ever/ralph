@@ -96,13 +96,38 @@ describe('commands/prd-add', () => {
     expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('File not found'))
   })
 
-  it('checks if PRD already exists', async () => {
+  it('checks if PRD already exists in global when not initialized', async () => {
+    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(false)
     vi.mocked(prdManager.prdExists).mockResolvedValue(true)
 
     await expect(prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' }))
       .rejects.toThrow('process.exit called')
 
-    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('already exists'))
+    expect(prdManager.prdExists).toHaveBeenCalledWith('test-prd', 'global')
+    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('already exists (global)'))
+  })
+
+  it('checks if PRD already exists in local when initialized', async () => {
+    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(true)
+    vi.mocked(prdManager.prdExists).mockResolvedValue(true)
+    vi.mocked(prdManager.getPrdDir).mockResolvedValue('/project/.ralph/prd/test-prd')
+
+    await expect(prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' }))
+      .rejects.toThrow('process.exit called')
+
+    expect(prdManager.prdExists).toHaveBeenCalledWith('test-prd', 'local')
+    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('already exists (local)'))
+  })
+
+  it('creates local PRD when project initialized even if global exists', async () => {
+    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(true)
+    vi.mocked(prdManager.prdExists).mockResolvedValue(false) // local doesn't exist
+    vi.mocked(prdManager.getPrdDir).mockResolvedValue('/project/.ralph/prd/test-prd')
+
+    await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
+
+    expect(prdManager.prdExists).toHaveBeenCalledWith('test-prd', 'local')
+    expect(prdManager.createPrdFolder).toHaveBeenCalledWith('test-prd')
   })
 
   it('creates PRD folder', async () => {

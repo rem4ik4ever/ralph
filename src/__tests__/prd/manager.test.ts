@@ -167,11 +167,17 @@ describe('prd/manager', () => {
       await createPrdFolder('new-prd', 'global')
       expect(mkdir).toHaveBeenCalledWith('/home/test/.ralph/prd/new-prd', { recursive: true })
     })
+
+    it('throws when mkdir fails', async () => {
+      vi.mocked(access).mockResolvedValueOnce(undefined)
+      vi.mocked(mkdir).mockRejectedValue(new Error('EACCES'))
+      await expect(createPrdFolder('new-prd')).rejects.toThrow('EACCES')
+    })
   })
 
   describe('copyMarkdown', () => {
-    it('copies source file to local prd.md when local exists', async () => {
-      vi.mocked(access).mockResolvedValueOnce(undefined)
+    it('copies to local prd.md when project initialized', async () => {
+      vi.mocked(access).mockResolvedValueOnce(undefined) // .ralph exists
       vi.mocked(copyFile).mockResolvedValue(undefined)
       await copyMarkdown('/path/to/source.md', 'my-prd')
       expect(copyFile).toHaveBeenCalledWith(
@@ -180,14 +186,20 @@ describe('prd/manager', () => {
       )
     })
 
-    it('copies source file to global prd.md when local missing', async () => {
-      vi.mocked(access).mockRejectedValueOnce(new Error('ENOENT'))
+    it('copies to global prd.md when project not initialized', async () => {
+      vi.mocked(access).mockRejectedValueOnce(new Error('ENOENT')) // .ralph missing
       vi.mocked(copyFile).mockResolvedValue(undefined)
       await copyMarkdown('/path/to/source.md', 'my-prd')
       expect(copyFile).toHaveBeenCalledWith(
         '/path/to/source.md',
         '/home/test/.ralph/prd/my-prd/prd.md'
       )
+    })
+
+    it('throws when copyFile fails', async () => {
+      vi.mocked(access).mockResolvedValueOnce(undefined)
+      vi.mocked(copyFile).mockRejectedValue(new Error('EACCES'))
+      await expect(copyMarkdown('/path/to/source.md', 'my-prd')).rejects.toThrow('EACCES')
     })
   })
 
