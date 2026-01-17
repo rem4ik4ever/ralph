@@ -1,6 +1,8 @@
 import chalk from 'chalk'
 import { select, confirm } from '@inquirer/prompts'
-import type { AgentType } from '../prd/types.js'
+import { access, mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import type { AgentType, InitConfig } from '../prd/types.js'
 
 export interface InitOptions {
   agent?: AgentType
@@ -72,4 +74,68 @@ export async function runInitPrompts(): Promise<InitResult> {
   }
 
   return { agent, installSkills, aborted: false }
+}
+
+export function getRalphDir(): string {
+  return join(process.cwd(), '.ralph')
+}
+
+export function getRalphPrdDir(): string {
+  return join(getRalphDir(), 'prd')
+}
+
+export function getConfigPath(): string {
+  return join(getRalphDir(), 'config.json')
+}
+
+export async function ralphDirExists(): Promise<boolean> {
+  try {
+    await access(getRalphDir())
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function createProjectDirs(): Promise<void> {
+  const ralphDir = getRalphDir()
+  const prdDir = getRalphPrdDir()
+
+  try {
+    await mkdir(ralphDir, { recursive: true })
+    console.log(chalk.green(`✓ Created ${ralphDir}`))
+
+    await mkdir(prdDir, { recursive: true })
+    console.log(chalk.green(`✓ Created ${prdDir}`))
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException
+    if (error.code === 'EACCES') {
+      console.error(chalk.red(`Permission denied: Cannot create ${ralphDir}`))
+      console.error(chalk.gray('Check directory permissions and try again'))
+    } else {
+      console.error(chalk.red(`Failed to create directories: ${error.message}`))
+    }
+    throw err
+  }
+}
+
+export async function writeConfig(agent: AgentType): Promise<void> {
+  const configPath = getConfigPath()
+  const config: InitConfig = {
+    agent,
+    initialized: new Date().toISOString(),
+  }
+
+  try {
+    await writeFile(configPath, JSON.stringify(config, null, 2))
+    console.log(chalk.green(`✓ Saved config: ${configPath}`))
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException
+    if (error.code === 'EACCES') {
+      console.error(chalk.red(`Permission denied: Cannot write ${configPath}`))
+    } else {
+      console.error(chalk.red(`Failed to write config: ${error.message}`))
+    }
+    throw err
+  }
 }
