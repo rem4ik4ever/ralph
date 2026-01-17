@@ -69,3 +69,11 @@ Started: 2026-01-16
 - `ralph prd --help` outputs both add and list subcommands correctly
 - Files: src/index.ts (no changes needed)
 - **Learnings:** CLI structure was completed incrementally in cmd-add-1 and cmd-list-1
+
+## Task - cleanup-1
+- Removed entire src/utils/files.ts (COMPLETION_MARKER, buildPrompt, readPromptFiles)
+- Removed entire src/session/ module (manager.ts, logger.ts, index.ts)
+- Removed tests: src/__tests__/utils/files.test.ts, src/__tests__/session/
+- Updated src/utils/index.ts to export only ndjson.js
+- Build passes, 89 tests pass
+- **Learnings:** Session module was never used by run.ts (has own writeIterationLog)

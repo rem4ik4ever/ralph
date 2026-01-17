@@ -139,7 +139,7 @@
         "Remove old session folder logic if unused",
         "Update exports in index files"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "integration-1",
