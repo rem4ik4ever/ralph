@@ -3,11 +3,17 @@ import { program } from 'commander'
 import { run } from './commands/run.js'
 import { prdAdd } from './commands/prd-add.js'
 import { prdList } from './commands/prd-list.js'
+import { init } from './commands/init.js'
 
 program
   .name('ralph')
   .description('Loop coding agent CLI - run agents headlessly in a loop')
   .version('0.1.0')
+
+program
+  .command('init')
+  .description('Initialize ralph in current project')
+  .action(init)
 
 program
   .command('run')
