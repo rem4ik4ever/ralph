@@ -1,0 +1,27 @@
+export interface PrdTask {
+  id: string
+  category: string
+  description: string
+  steps: string[]
+  passes: boolean
+}
+
+export interface PrdJson {
+  prdName: string
+  tasks: PrdTask[]
+  context?: {
+    patterns?: string[]
+    keyFiles?: string[]
+    nonGoals?: string[]
+  }
+}
+
+export type PrdStatusType = 'pending' | 'in_progress' | 'completed'
+
+export interface PrdStatus {
+  name: string
+  description: string
+  status: PrdStatusType
+  tasksTotal: number
+  tasksCompleted: number
+}

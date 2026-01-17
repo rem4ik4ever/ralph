@@ -1,1 +1,1 @@
-export * from './files.js'
+export * from './ndjson.js'

@@ -32,17 +32,17 @@ describe('agents/claude', () => {
     expect(claude.name).toBe('claude')
   })
 
-  it('spawns claude with correct args', async () => {
+  it('spawns claude with stream-json flag', async () => {
     const promise = claude.execute('test prompt', '/test/cwd')
 
-    mockProcess.stdout.emit('data', Buffer.from('output'))
+    mockProcess.stdout.emit('data', Buffer.from('{"type":"result","subtype":"success","is_error":false,"duration_ms":100}\n'))
     mockProcess.emit('close', 0)
 
     await promise
 
     expect(spawn).toHaveBeenCalledWith(
       'claude',
-      ['-p', '--dangerously-skip-permissions'],
+      ['-p', '--verbose', '--dangerously-skip-permissions', '--output-format', 'stream-json'],
       expect.objectContaining({
         cwd: '/test/cwd',
         shell: true,
@@ -61,22 +61,42 @@ describe('agents/claude', () => {
     expect(mockProcess.stdin.end).toHaveBeenCalled()
   })
 
-  it('captures stdout', async () => {
+  it('parses text content from assistant events', async () => {
     const promise = claude.execute('test', '/cwd')
 
-    mockProcess.stdout.emit('data', Buffer.from('hello '))
-    mockProcess.stdout.emit('data', Buffer.from('world'))
+    mockProcess.stdout.emit('data', Buffer.from(
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"hello world"}]}}\n'
+    ))
     mockProcess.emit('close', 0)
 
     const result = await promise
 
-    expect(result.output).toBe('hello world')
+    expect(result.output).toContain('hello world')
+  })
+
+  it('accumulates text from multiple events', async () => {
+    const promise = claude.execute('test', '/cwd')
+
+    mockProcess.stdout.emit('data', Buffer.from(
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"part1"}]}}\n'
+    ))
+    mockProcess.stdout.emit('data', Buffer.from(
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"part2"}]}}\n'
+    ))
+    mockProcess.emit('close', 0)
+
+    const result = await promise
+
+    expect(result.output).toContain('part1')
+    expect(result.output).toContain('part2')
   })
 
   it('captures stderr', async () => {
     const promise = claude.execute('test', '/cwd')
 
-    mockProcess.stdout.emit('data', Buffer.from('out'))
+    mockProcess.stdout.emit('data', Buffer.from(
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"out"}]}}\n'
+    ))
     mockProcess.stderr.emit('data', Buffer.from('err'))
     mockProcess.emit('close', 0)
 
@@ -125,17 +145,47 @@ describe('agents/claude', () => {
     expect(result.exitCode).toBe(1)
   })
 
-  it('calls onOutput callback for stdout', async () => {
+  it('formats tool_use events', async () => {
     const onOutput = vi.fn()
     const promise = claude.execute('test', '/cwd', { onOutput })
 
-    mockProcess.stdout.emit('data', Buffer.from('chunk1'))
-    mockProcess.stdout.emit('data', Buffer.from('chunk2'))
+    mockProcess.stdout.emit('data', Buffer.from(
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"1","name":"Read","input":{"file_path":"/test"}}]}}\n'
+    ))
     mockProcess.emit('close', 0)
 
     await promise
 
-    expect(onOutput).toHaveBeenCalledWith('chunk1')
-    expect(onOutput).toHaveBeenCalledWith('chunk2')
+    expect(onOutput).toHaveBeenCalledWith(expect.stringContaining('[tool] Read'))
+  })
+
+  it('formats system init events', async () => {
+    const onOutput = vi.fn()
+    const promise = claude.execute('test', '/cwd', { onOutput })
+
+    mockProcess.stdout.emit('data', Buffer.from(
+      '{"type":"system","subtype":"init","session_id":"abc123","tools":[],"model":"claude-sonnet"}\n'
+    ))
+    mockProcess.emit('close', 0)
+
+    await promise
+
+    expect(onOutput).toHaveBeenCalledWith(expect.stringContaining('[session] abc123'))
+  })
+
+  it('handles malformed JSON gracefully', async () => {
+    const onOutput = vi.fn()
+    const promise = claude.execute('test', '/cwd', { onOutput })
+
+    mockProcess.stdout.emit('data', Buffer.from('not valid json\n'))
+    mockProcess.stdout.emit('data', Buffer.from(
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"ok"}]}}\n'
+    ))
+    mockProcess.emit('close', 0)
+
+    const result = await promise
+
+    expect(result.output).toContain('ok')
+    expect(onOutput).toHaveBeenCalledWith(expect.stringContaining('[warn]'))
   })
 })

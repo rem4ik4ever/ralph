@@ -1,0 +1,94 @@
+# Progress Log
+PRD: prd-workflow
+Started: 2026-01-16
+
+## Codebase Patterns
+- ESM imports require `.js` extension (e.g., `export * from './types.js'`)
+
+---
+<!-- Task logs below - APPEND ONLY -->
+
+## Task - types-1
+- Created PrdTask, PrdJson, PrdStatus interfaces
+- Files: src/prd/types.ts, src/prd/index.ts
+- **Learnings:** Need .js extension for ESM re-exports
+
+## Task - templates-1
+- Implemented template system: ensureTemplates(), loadTemplate(), substituteVars()
+- Files: src/templates/templates.ts, src/templates/index.ts, src/__tests__/templates/templates.test.ts
+- **Learnings:** getBundledTemplatesDir() uses import.meta.url for ESM compat
+
+## Task - templates-2
+- prd-md-to-json.md template already existed at templates/prd-md-to-json.md
+- Template includes JSON schema, conversion rules, $PRD_PATH/$OUTPUT_PATH vars
+- Instructs agent to output only JSON
+- Files: templates/prd-md-to-json.md
+- **Learnings:** Bundled templates live in templates/ dir (not src/templates/)
+
+## Task - templates-3
+- Created complete-next-task.md template
+- Files: templates/complete-next-task.md
+- Includes all process steps, variables ($PRD_NAME, $PRD_PATH, $CWD), and completion marker
+- **Learnings:** Pre-existing test failures are unrelated to template work
+
+## Task - manager-1
+- Created PRD manager with CRUD operations
+- Files: src/prd/manager.ts, src/prd/index.ts, src/__tests__/prd/manager.test.ts
+- Functions: getPrdsDir, getPrdDir, prdExists, createPrdFolder, copyMarkdown, getPrd, listPrds
+- All 12 unit tests pass
+- **Learnings:** computeStatus helper computes pending/in_progress/completed from task.passes counts
+
+## Task - cmd-add-1
+- Created prd add command with validation, agent execution, json verification
+- Files: src/commands/prd-add.ts, src/__tests__/commands/prd-add.test.ts, src/index.ts
+- Registered prd command group with add subcommand in CLI entry point
+- All 13 unit tests pass
+- **Learnings:** Commander.js supports nested command groups via program.command().command()
+
+## Task - cmd-list-1
+- Created prd list command with formatted table output
+- Files: src/commands/prd-list.ts, src/__tests__/commands/prd-list.test.ts, src/index.ts
+- Uses listPrds() from manager, formats with chalk colors per status
+- All 5 unit tests pass
+- **Learnings:** chalk color codes add ~10 chars to padEnd calculations
+
+## Task - cmd-run-1
+- Rewrote run command for PRD-only mode
+- Files: src/commands/run.ts, src/__tests__/commands/run.test.ts, src/__tests__/cli.test.ts, src/index.ts
+- Signature now: `ralph run <prd-name> [--agent] [--iterations]`
+- Loads complete-next-task.md template, substitutes PRD_NAME/PRD_PATH/CWD vars
+- Saves logs to ~/.ralph/prd/<name>/iterations/
+- Stops on `<tasks>COMPLETE</tasks>` marker
+- All 15 unit tests pass, 7 CLI tests pass
+- **Learnings:** writeIterationLog is self-contained, no need for session module
+
+## Task - cli-1
+- Verified CLI entry point already complete from previous tasks
+- prd command group at line 20, add subcommand lines 22-28, list subcommand line 30
+- run command uses PRD-only signature (lines 12-18): `ralph run <prd-name> [--agent] [--iterations]`
+- `ralph prd --help` outputs both add and list subcommands correctly
+- Files: src/index.ts (no changes needed)
+- **Learnings:** CLI structure was completed incrementally in cmd-add-1 and cmd-list-1
+
+## Task - cleanup-1
+- Removed entire src/utils/files.ts (COMPLETION_MARKER, buildPrompt, readPromptFiles)
+- Removed entire src/session/ module (manager.ts, logger.ts, index.ts)
+- Removed tests: src/__tests__/utils/files.test.ts, src/__tests__/session/
+- Updated src/utils/index.ts to export only ndjson.js
+- Build passes, 89 tests pass
+- **Learnings:** Session module was never used by run.ts (has own writeIterationLog)
+
+## Task - integration-1
+- Created integration test at src/__tests__/integration/prd-workflow.test.ts
+- Tests add → list → run → list flow with status progression (pending → in_progress)
+- Uses temp directories with mkdtemp/rm for isolation
+- Mocks agent execution via vi.mock()
+- 4 tests: workflow flow, COMPLETE marker, completed status, empty folder
+- All 93 tests pass
+- **Learnings:** vi.mock() must list all functions to mock; dynamic imports can leak mocks between tests
+
+## Task - fixtures-1
+- Created sample-prd.md: user auth PRD with 3 tasks
+- Created sample-prd.json: expected JSON output matching prd-md-to-json conversion
+- Files at src/__tests__/fixtures/
+- **Learnings:** Fixtures can be used by future tests to verify template conversion

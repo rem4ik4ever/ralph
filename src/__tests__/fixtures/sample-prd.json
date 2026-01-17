@@ -1,0 +1,47 @@
+{
+  "prdName": "user-auth",
+  "tasks": [
+    {
+      "id": "auth-1",
+      "category": "model",
+      "description": "Create user model",
+      "steps": [
+        "Define User interface with id, email, passwordHash",
+        "Add validation for email format",
+        "Export from src/models/user.ts"
+      ],
+      "passes": false
+    },
+    {
+      "id": "auth-2",
+      "category": "api",
+      "description": "Implement login endpoint",
+      "steps": [
+        "POST /api/auth/login",
+        "Accept email and password in body",
+        "Return JWT token on success",
+        "Return 401 on invalid credentials"
+      ],
+      "passes": false
+    },
+    {
+      "id": "auth-3",
+      "category": "api",
+      "description": "Add logout endpoint",
+      "steps": [
+        "POST /api/auth/logout",
+        "Invalidate current session",
+        "Return 200 on success"
+      ],
+      "passes": false
+    }
+  ],
+  "context": {
+    "patterns": [],
+    "keyFiles": [],
+    "nonGoals": [
+      "OAuth integration",
+      "Password reset flow"
+    ]
+  }
+}
