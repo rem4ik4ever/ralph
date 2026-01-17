@@ -2,6 +2,7 @@
 import { program } from 'commander'
 import { run } from './commands/run.js'
 import { prdAdd } from './commands/prd-add.js'
+import { prdList } from './commands/prd-list.js'
 
 program
   .name('ralph')
@@ -25,5 +26,7 @@ prd
   .argument('<name>', 'Name for the PRD')
   .option('-a, --agent <agent>', 'Agent type', 'claude')
   .action(prdAdd)
+
+prd.command('list').description('List all PRDs').action(prdList)
 
 program.parse()

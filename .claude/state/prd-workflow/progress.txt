@@ -44,3 +44,10 @@ Started: 2026-01-16
 - Registered prd command group with add subcommand in CLI entry point
 - All 13 unit tests pass
 - **Learnings:** Commander.js supports nested command groups via program.command().command()
+
+## Task - cmd-list-1
+- Created prd list command with formatted table output
+- Files: src/commands/prd-list.ts, src/__tests__/commands/prd-list.test.ts, src/index.ts
+- Uses listPrds() from manager, formats with chalk colors per status
+- All 5 unit tests pass
+- **Learnings:** chalk color codes add ~10 chars to padEnd calculations

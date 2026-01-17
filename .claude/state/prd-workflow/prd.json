@@ -97,7 +97,7 @@
         "Handles empty prd folder gracefully",
         "Unit tests pass"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "cmd-run-1",
