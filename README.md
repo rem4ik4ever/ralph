@@ -104,6 +104,38 @@ Agent picks up next incomplete task, implements it, runs feedback loops (tests/l
 - Node.js >= 18
 - Claude Code CLI installed and authenticated
 
+## Releases
+
+This project uses [semantic-release](https://github.com/semantic-release/semantic-release) for automated versioning and npm publishing.
+
+### How it works
+
+1. Push/merge to `main` triggers release workflow
+2. Commits are analyzed to determine version bump
+3. CHANGELOG.md is updated automatically
+4. Package is published to npm
+5. GitHub release is created
+
+### Conventional Commits
+
+Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+| Type | Version Bump | Example |
+|------|--------------|---------|
+| `fix` | Patch (1.0.x) | `fix(cli): handle empty input` |
+| `feat` | Minor (1.x.0) | `feat(prd): add export command` |
+| `feat!` or `BREAKING CHANGE:` | Major (x.0.0) | `feat!: change config format` |
+
+Other types (`docs`, `chore`, `refactor`, `test`, `ci`) don't trigger releases.
+
 ## License
 
 MIT
