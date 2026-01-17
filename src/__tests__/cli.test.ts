@@ -31,7 +31,7 @@ describe('CLI', () => {
 
     it('shows run command help', () => {
       const { stdout } = runCli('run --help')
-      expect(stdout).toContain('<prompt...>')
+      expect(stdout).toContain('<prd-name>')
       expect(stdout).toContain('--agent')
       expect(stdout).toContain('--iterations')
     })
@@ -45,15 +45,15 @@ describe('CLI', () => {
   })
 
   describe('run command validation', () => {
-    it('requires prompt argument', () => {
+    it('requires prd-name argument', () => {
       const { stderr, exitCode } = runCli('run')
       expect(exitCode).not.toBe(0)
-      expect(stderr).toContain('prompt')
+      expect(stderr).toContain('prd-name')
     })
 
-    it('shows prompt as argument in help', () => {
+    it('shows prd-name as argument in help', () => {
       const { stdout } = runCli('run --help')
-      expect(stdout).toContain('<prompt...>')
+      expect(stdout).toContain('<prd-name>')
     })
 
     it('accepts short -a flag for agent', () => {

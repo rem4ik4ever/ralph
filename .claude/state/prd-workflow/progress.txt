@@ -51,3 +51,13 @@ Started: 2026-01-16
 - Uses listPrds() from manager, formats with chalk colors per status
 - All 5 unit tests pass
 - **Learnings:** chalk color codes add ~10 chars to padEnd calculations
+
+## Task - cmd-run-1
+- Rewrote run command for PRD-only mode
+- Files: src/commands/run.ts, src/__tests__/commands/run.test.ts, src/__tests__/cli.test.ts, src/index.ts
+- Signature now: `ralph run <prd-name> [--agent] [--iterations]`
+- Loads complete-next-task.md template, substitutes PRD_NAME/PRD_PATH/CWD vars
+- Saves logs to ~/.ralph/prd/<name>/iterations/
+- Stops on `<tasks>COMPLETE</tasks>` marker
+- All 15 unit tests pass, 7 CLI tests pass
+- **Learnings:** writeIterationLog is self-contained, no need for session module

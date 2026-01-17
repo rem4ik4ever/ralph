@@ -11,8 +11,8 @@ program
 
 program
   .command('run')
-  .description('Run an agent in a loop')
-  .argument('<prompt...>', 'Prompt files to pass to agent')
+  .description('Run PRD tasks in a loop')
+  .argument('<prd-name>', 'Name of PRD to run')
   .option('-a, --agent <agent>', 'Agent type', 'claude')
   .option('-i, --iterations <n>', 'Number of loop iterations', '4')
   .action(run)

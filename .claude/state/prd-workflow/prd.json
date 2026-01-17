@@ -114,7 +114,7 @@
         "Stops on <tasks>COMPLETE</tasks> marker",
         "Unit tests rewritten for PRD mode"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "cli-1",
