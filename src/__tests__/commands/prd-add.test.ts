@@ -21,6 +21,7 @@ vi.mock('../../prd/manager.js', () => ({
   createPrdFolder: vi.fn(),
   copyMarkdown: vi.fn(),
   getPrdDir: vi.fn(),
+  isProjectInitialized: vi.fn(),
 }))
 
 vi.mock('../../templates/templates.js', () => ({
@@ -47,7 +48,8 @@ describe('commands/prd-add', () => {
     vi.mocked(agents.getAgent).mockReturnValue(mockAgent)
     vi.mocked(access).mockResolvedValue(undefined)
     vi.mocked(prdManager.prdExists).mockResolvedValue(false)
-    vi.mocked(prdManager.getPrdDir).mockReturnValue('/home/test/.ralph/prd/test-prd')
+    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(false)
+    vi.mocked(prdManager.getPrdDir).mockResolvedValue('/home/test/.ralph/prd/test-prd')
     vi.mocked(prdManager.createPrdFolder).mockResolvedValue(undefined)
     vi.mocked(prdManager.copyMarkdown).mockResolvedValue(undefined)
     vi.mocked(templates.ensureTemplates).mockResolvedValue(undefined)
