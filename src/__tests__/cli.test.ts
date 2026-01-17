@@ -31,7 +31,7 @@ describe('CLI', () => {
 
     it('shows run command help', () => {
       const { stdout } = runCli('run --help')
-      expect(stdout).toContain('--prompt')
+      expect(stdout).toContain('<prompt...>')
       expect(stdout).toContain('--agent')
       expect(stdout).toContain('--iterations')
     })

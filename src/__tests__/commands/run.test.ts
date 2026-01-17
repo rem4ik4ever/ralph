@@ -69,21 +69,17 @@ describe('commands/run', () => {
   })
 
   it('validates iterations is positive number', async () => {
-    await expect(run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '0',
-    })).rejects.toThrow('process.exit called')
+    await expect(
+      run(['test.md'], { agent: 'claude', iterations: '0' })
+    ).rejects.toThrow('process.exit called')
 
     expect(mockExit).toHaveBeenCalledWith(1)
   })
 
   it('validates iterations is a number', async () => {
-    await expect(run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: 'abc',
-    })).rejects.toThrow('process.exit called')
+    await expect(
+      run(['test.md'], { agent: 'claude', iterations: 'abc' })
+    ).rejects.toThrow('process.exit called')
 
     expect(mockExit).toHaveBeenCalledWith(1)
   })
@@ -91,21 +87,15 @@ describe('commands/run', () => {
   it('handles prompt file read errors', async () => {
     vi.mocked(utils.buildPrompt).mockRejectedValue(new Error('File not found'))
 
-    await expect(run({
-      prompt: ['missing.md'],
-      agent: 'claude',
-      iterations: '1',
-    })).rejects.toThrow('process.exit called')
+    await expect(
+      run(['missing.md'], { agent: 'claude', iterations: '1' })
+    ).rejects.toThrow('process.exit called')
 
     expect(mockExit).toHaveBeenCalledWith(1)
   })
 
   it('creates session with correct options', async () => {
-    await run({
-      prompt: ['prompt.md', 'context.md'],
-      agent: 'claude',
-      iterations: '3',
-    })
+    await run(['prompt.md', 'context.md'], { agent: 'claude', iterations: '3' })
 
     expect(session.createSession).toHaveBeenCalledWith({
       promptFiles: ['prompt.md', 'context.md'],
@@ -115,21 +105,13 @@ describe('commands/run', () => {
   })
 
   it('runs correct number of iterations', async () => {
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '3',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '3' })
 
     expect(mockAgent.execute).toHaveBeenCalledTimes(3)
   })
 
   it('writes log after each iteration', async () => {
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '2',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '2' })
 
     expect(session.writeLog).toHaveBeenCalledTimes(2)
     expect(session.writeLog).toHaveBeenCalledWith('session123', 0, expect.any(Object))
@@ -139,11 +121,7 @@ describe('commands/run', () => {
   it('passes built prompt to agent', async () => {
     vi.mocked(utils.buildPrompt).mockResolvedValue('built prompt content')
 
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '1',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '1' })
 
     expect(mockAgent.execute).toHaveBeenCalledWith(
       'built prompt content',
@@ -153,11 +131,7 @@ describe('commands/run', () => {
   })
 
   it('outputs session path on completion', async () => {
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '1',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '1' })
 
     expect(mockConsoleLog).toHaveBeenCalledWith(
       expect.stringContaining('/home/.ralph/sessions/session123')
@@ -171,11 +145,7 @@ describe('commands/run', () => {
       duration: 100,
     })
 
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '1',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '1' })
 
     // Should still complete, just log the error
     expect(session.writeLog).toHaveBeenCalled()
@@ -188,11 +158,7 @@ describe('commands/run', () => {
       duration: 100,
     })
 
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '5',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '5' })
 
     // Should stop after first iteration
     expect(mockAgent.execute).toHaveBeenCalledTimes(1)
@@ -205,11 +171,7 @@ describe('commands/run', () => {
       duration: 100,
     })
 
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '3',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '3' })
 
     expect(mockAgent.execute).toHaveBeenCalledTimes(3)
   })
@@ -219,11 +181,7 @@ describe('commands/run', () => {
       .mockResolvedValueOnce({ output: 'working', exitCode: 0, duration: 100 })
       .mockResolvedValueOnce({ output: '<ralph>RALPH_COMPLETED</ralph>', exitCode: 0, duration: 100 })
 
-    await run({
-      prompt: ['test.md'],
-      agent: 'claude',
-      iterations: '5',
-    })
+    await run(['test.md'], { agent: 'claude', iterations: '5' })
 
     expect(mockAgent.execute).toHaveBeenCalledTimes(2)
   })
