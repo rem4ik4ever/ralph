@@ -61,3 +61,11 @@ Started: 2026-01-16
 - Stops on `<tasks>COMPLETE</tasks>` marker
 - All 15 unit tests pass, 7 CLI tests pass
 - **Learnings:** writeIterationLog is self-contained, no need for session module
+
+## Task - cli-1
+- Verified CLI entry point already complete from previous tasks
+- prd command group at line 20, add subcommand lines 22-28, list subcommand line 30
+- run command uses PRD-only signature (lines 12-18): `ralph run <prd-name> [--agent] [--iterations]`
+- `ralph prd --help` outputs both add and list subcommands correctly
+- Files: src/index.ts (no changes needed)
+- **Learnings:** CLI structure was completed incrementally in cmd-add-1 and cmd-list-1

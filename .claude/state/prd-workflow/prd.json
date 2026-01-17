@@ -127,7 +127,7 @@
         "run command updated to PRD-only signature",
         "ralph prd --help shows subcommands"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "cleanup-1",
