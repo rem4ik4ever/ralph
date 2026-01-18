@@ -84,7 +84,7 @@
         "Test prd delete with nonexistent PRD",
         "All tests pass"
       ],
-      "passes": false
+      "passes": true
     }
   ],
   "context": {

@@ -44,3 +44,13 @@
 - Installs to ~/.claude/skills/ralph/SKILL.md
 - **Files:** src/init/templates.ts, src/commands/init.ts
 - **Learnings:** Template loading uses same pattern for all skills
+
+## Task - testing-1
+- Added 8 tests for `getPrdInfo` in manager.test.ts
+- Added 5 tests for prd-info command in prd-info.test.ts
+- Added 8 tests for prd-delete command in prd-delete.test.ts
+- Covers: not_found, partial, pending, in_progress, completed statuses
+- Covers: confirmation, --force, Ctrl+C, file listing
+- Total: 218 tests pass
+- **Files:** src/__tests__/prd/manager.test.ts, src/__tests__/commands/prd-info.test.ts, src/__tests__/commands/prd-delete.test.ts
+- **Learnings:** Filter `console.log` mock calls for string values (undefined from empty log calls)
