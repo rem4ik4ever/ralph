@@ -48,4 +48,9 @@ export interface StreamPersister {
    * Called on crash (uncaughtException)
    */
   crash(error: Error): Promise<void>
+
+  /**
+   * Returns any write error that occurred during persistence
+   */
+  getError(): Error | null
 }

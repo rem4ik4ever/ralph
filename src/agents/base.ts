@@ -1,3 +1,5 @@
+import type { ChildProcess } from 'node:child_process'
+
 export interface AgentResult {
   output: string
   exitCode: number
@@ -10,6 +12,8 @@ export interface ExecuteOptions {
   onPersist?: (chunk: string, isEventBoundary: boolean) => void
   /** Called for stderr content */
   onStderr?: (chunk: string) => void
+  /** Called with spawned process for signal handling */
+  onProcess?: (proc: ChildProcess) => void
 }
 
 export interface Agent {

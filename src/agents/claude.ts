@@ -13,6 +13,7 @@ export const claude: Agent = {
     const onOutput = options?.onOutput
     const onPersist = options?.onPersist
     const onStderr = options?.onStderr
+    const onProcess = options?.onProcess
 
     return new Promise((resolve, reject) => {
       const proc = spawn('claude', [
@@ -25,6 +26,9 @@ export const claude: Agent = {
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: true,
       })
+
+      // Expose process for signal handling
+      onProcess?.(proc)
 
       let rawOutput = ''
       let textOutput = ''

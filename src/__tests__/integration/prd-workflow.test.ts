@@ -53,6 +53,7 @@ describe('integration/prd-workflow', () => {
     complete: vi.fn().mockResolvedValue(undefined),
     abort: vi.fn().mockResolvedValue(undefined),
     crash: vi.fn().mockResolvedValue(undefined),
+    getError: vi.fn().mockReturnValue(null),
   }
 
   beforeEach(async () => {

@@ -15,6 +15,8 @@ export class StreamPersisterImpl implements StreamPersister {
   private fileHandle: fs.FileHandle | null = null
   private flushTimer: ReturnType<typeof setInterval> | null = null
   private flushIntervalMs: number
+  private flushing = false // mutex for flush
+  private finalized = false // guard against double finalization
 
   constructor(options: StreamPersisterOptions) {
     this.logPath = options.logPath
@@ -115,20 +117,28 @@ export class StreamPersisterImpl implements StreamPersister {
       .map((line) => (line ? `[stderr] ${line}` : line))
       .join('\n')
     this.buffer += prefixed
+    this.startFlushTimer()
   }
 
   async flush(): Promise<void> {
-    if (!this.buffer) return
+    if (!this.buffer || this.flushing) return
 
-    const handle = await this.ensureFile()
-    if (!handle) return
+    this.flushing = true
+    try {
+      const handle = await this.ensureFile()
+      if (!handle) return
 
-    const content = this.buffer
-    this.buffer = ''
-    await this.writeToFile(content)
+      const content = this.buffer
+      this.buffer = ''
+      await this.writeToFile(content)
+    } finally {
+      this.flushing = false
+    }
   }
 
   async complete(exitCode: number, duration: number): Promise<void> {
+    if (this.finalized) return
+    this.finalized = true
     this.stopFlushTimer()
     this.status = 'completed'
     await this.flush()
@@ -137,6 +147,8 @@ export class StreamPersisterImpl implements StreamPersister {
   }
 
   async abort(signal: string): Promise<void> {
+    if (this.finalized) return
+    this.finalized = true
     this.stopFlushTimer()
     this.status = 'aborted'
     await this.flush()
@@ -145,6 +157,8 @@ export class StreamPersisterImpl implements StreamPersister {
   }
 
   async crash(error: Error): Promise<void> {
+    if (this.finalized) return
+    this.finalized = true
     this.stopFlushTimer()
     this.status = 'crashed'
     await this.flush()
@@ -202,5 +216,12 @@ export class StreamPersisterImpl implements StreamPersister {
   async destroy(): Promise<void> {
     this.stopFlushTimer()
     await this.close()
+  }
+
+  /**
+   * Returns any write error that occurred
+   */
+  getError(): Error | null {
+    return this.writeError
   }
 }

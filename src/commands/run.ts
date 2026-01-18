@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import type { ChildProcess } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getAgent, isValidAgent } from '../agents/index.js'
@@ -16,13 +17,21 @@ export interface RunOptions {
 
 type SignalType = 'SIGINT' | 'SIGTERM' | 'SIGHUP'
 
+const SIGNAL_EXIT_CODES: Record<SignalType, number> = {
+  SIGINT: 130, // 128 + 2
+  SIGTERM: 143, // 128 + 15
+  SIGHUP: 129, // 128 + 1
+}
+
 /**
  * Signal handler manager for graceful interruption
  */
 class SignalHandlers {
   private activePersister: StreamPersister | null = null
+  private activeProcess: ChildProcess | null = null
   private handlers = new Map<SignalType | 'uncaughtException', (...args: unknown[]) => void>()
   private aborted = false
+  private handling = false // re-entrancy guard
 
   register(): void {
     const signals: SignalType[] = ['SIGINT', 'SIGTERM', 'SIGHUP']
@@ -56,21 +65,43 @@ class SignalHandlers {
     this.activePersister = persister
   }
 
+  setProcess(proc: ChildProcess | null): void {
+    this.activeProcess = proc
+  }
+
   wasAborted(): boolean {
     return this.aborted
   }
 
   private async handleSignal(signal: SignalType): Promise<void> {
+    if (this.handling) return // re-entrancy guard
+    this.handling = true
     this.aborted = true
+
+    // Kill child process first
+    if (this.activeProcess && !this.activeProcess.killed) {
+      this.activeProcess.kill(signal)
+      this.activeProcess = null
+    }
+
     if (this.activePersister) {
       await this.activePersister.abort(signal)
       this.activePersister = null
     }
     this.unregister()
-    process.exit(128 + (signal === 'SIGINT' ? 2 : signal === 'SIGTERM' ? 15 : 1))
+    process.exit(SIGNAL_EXIT_CODES[signal])
   }
 
   private async handleCrash(error: Error): Promise<void> {
+    if (this.handling) return // re-entrancy guard
+    this.handling = true
+
+    // Kill child process
+    if (this.activeProcess && !this.activeProcess.killed) {
+      this.activeProcess.kill()
+      this.activeProcess = null
+    }
+
     if (this.activePersister) {
       await this.activePersister.crash(error)
       this.activePersister = null
@@ -148,18 +179,37 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
       const persister = new StreamPersisterImpl({ logPath })
       signalHandlers.setPersister(persister)
 
-      const result = await agent.execute(prompt, process.cwd(), {
-        onOutput: (chunk) => process.stdout.write(chunk),
-        onPersist: (chunk, isEventBoundary) => {
-          void persister.append(chunk, isEventBoundary)
-        },
-        onStderr: (chunk) => {
-          void persister.appendStderr(chunk)
-        },
-      })
+      let result
+      try {
+        result = await agent.execute(prompt, process.cwd(), {
+          onOutput: (chunk) => process.stdout.write(chunk),
+          onPersist: (chunk, isEventBoundary) => {
+            void persister.append(chunk, isEventBoundary)
+          },
+          onStderr: (chunk) => {
+            void persister.appendStderr(chunk)
+          },
+          onProcess: (proc) => signalHandlers.setProcess(proc),
+        })
+      } catch (err) {
+        // Execution failed - persist crash state and re-throw
+        await persister.crash(err instanceof Error ? err : new Error(String(err)))
+        signalHandlers.setPersister(null)
+        signalHandlers.setProcess(null)
+        throw err
+      }
 
-      signalHandlers.setPersister(null)
+      signalHandlers.setProcess(null)
+      // Complete THEN clear persister (fixes race with signal handlers)
       await persister.complete(result.exitCode, result.duration)
+      signalHandlers.setPersister(null)
+
+      // Check for persistence errors
+      const persistError = persister.getError()
+      if (persistError) {
+        console.log(chalk.yellow(`  Warning: log write error: ${persistError.message}`))
+      }
+
       console.log()
 
       if (result.exitCode !== 0) {

@@ -52,6 +52,7 @@ describe('commands/run', () => {
     complete: vi.fn().mockResolvedValue(undefined),
     abort: vi.fn().mockResolvedValue(undefined),
     crash: vi.fn().mockResolvedValue(undefined),
+    getError: vi.fn().mockReturnValue(null),
   }
 
   let mockExit: ReturnType<typeof vi.spyOn>
