@@ -385,5 +385,4 @@ After registration, ask the user:
 
 "PRD '<feature-name>' is registered. Would you like to start task execution now?
 
-- Run `/ralph-complete-next-task <feature-name>` to start
-- Or run `ralph run <feature-name>` from the CLI"
+Run `ralph run <feature-name>` from the CLI"
