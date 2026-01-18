@@ -6,6 +6,10 @@ export interface AgentResult {
 
 export interface ExecuteOptions {
   onOutput?: (chunk: string) => void
+  /** Called for each formatted event for persistence. isEventBoundary signals event completion. */
+  onPersist?: (chunk: string, isEventBoundary: boolean) => void
+  /** Called for stderr content */
+  onStderr?: (chunk: string) => void
 }
 
 export interface Agent {

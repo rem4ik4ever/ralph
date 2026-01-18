@@ -76,7 +76,7 @@
         "Pass stderr to StreamPersister.appendStderr()",
         "Integration test passes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "command-2",

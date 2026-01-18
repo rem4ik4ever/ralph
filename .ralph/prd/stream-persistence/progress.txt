@@ -41,3 +41,13 @@
 - Added tests: continues after error, permission denied, concurrent persisters, rapid writes
 - Files changed: `src/__tests__/stream/persister.test.ts` (5 new error tests)
 - **Learnings:** Separate file handles per persister naturally handles concurrency; no locking needed
+
+## Task - command-1
+- Added `onPersist` and `onStderr` callbacks to `ExecuteOptions` in `src/agents/base.ts`
+- Updated `claude.ts` to call `onPersist()` for each formatted event with `isEventBoundary=true`
+- Updated `claude.ts` to call `onStderr()` for stderr data
+- `run.ts` instantiates `StreamPersisterImpl` per iteration, wires callbacks
+- Removed old `writeIterationLog()` function - persister handles log writing now
+- Files changed: `src/agents/base.ts`, `src/agents/claude.ts`, `src/commands/run.ts`
+- Tests updated: `src/__tests__/commands/run.test.ts`, `src/__tests__/integration/prd-workflow.test.ts`
+- **Learnings:** Using callbacks (`onPersist`, `onStderr`) keeps agent decoupled from persistence implementation

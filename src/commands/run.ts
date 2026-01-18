@@ -1,8 +1,9 @@
 import chalk from 'chalk'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getAgent, isValidAgent } from '../agents/index.js'
 import { getPrd, getPrdDir, prdExists } from '../prd/index.js'
+import { StreamPersisterImpl } from '../stream/persister.js'
 import { ensureTemplates, loadTemplate, substituteVars } from '../templates/index.js'
 
 const TASKS_COMPLETE_MARKER = '<tasks>COMPLETE</tasks>'
@@ -70,12 +71,21 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
     console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
     console.log()
 
+    const logPath = join(iterationsDir, `${i}.log`)
+    const persister = new StreamPersisterImpl({ logPath })
+
     const result = await agent.execute(prompt, process.cwd(), {
       onOutput: (chunk) => process.stdout.write(chunk),
+      onPersist: (chunk, isEventBoundary) => {
+        void persister.append(chunk, isEventBoundary)
+      },
+      onStderr: (chunk) => {
+        void persister.appendStderr(chunk)
+      },
     })
 
+    await persister.complete(result.exitCode, result.duration)
     console.log()
-    await writeIterationLog(iterationsDir, i, result)
 
     if (result.exitCode !== 0) {
       console.log(chalk.red(`  Exit code: ${result.exitCode}`))
@@ -98,29 +108,4 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
     console.log(chalk.yellow(`Reached max iterations (${iterations})`))
   }
   console.log(chalk.gray(`Logs: ${iterationsDir}`))
-}
-
-interface IterationResult {
-  output: string
-  exitCode: number
-  duration: number
-}
-
-async function writeIterationLog(
-  iterationsDir: string,
-  iteration: number,
-  result: IterationResult
-): Promise<void> {
-  const logPath = join(iterationsDir, `${iteration}.log`)
-
-  const header = [
-    `# Iteration ${iteration}`,
-    `Timestamp: ${new Date().toISOString()}`,
-    `Duration: ${result.duration}ms`,
-    `Exit Code: ${result.exitCode}`,
-    '---',
-    '',
-  ].join('\n')
-
-  await writeFile(logPath, header + result.output)
 }

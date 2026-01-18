@@ -4,6 +4,7 @@ import * as agents from '../../agents/index.js'
 import * as prdManager from '../../prd/index.js'
 import * as templates from '../../templates/index.js'
 import * as fs from 'node:fs/promises'
+import * as persister from '../../stream/persister.js'
 
 vi.mock('../../agents/index.js', () => ({
   getAgent: vi.fn(),
@@ -24,7 +25,10 @@ vi.mock('../../templates/index.js', () => ({
 
 vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn(),
-  writeFile: vi.fn(),
+}))
+
+vi.mock('../../stream/persister.js', () => ({
+  StreamPersisterImpl: vi.fn(),
 }))
 
 describe('commands/run', () => {
@@ -39,6 +43,15 @@ describe('commands/run', () => {
       { id: 'task-1', passes: true },
       { id: 'task-2', passes: false },
     ],
+  }
+
+  const mockPersister = {
+    append: vi.fn().mockResolvedValue(undefined),
+    appendStderr: vi.fn().mockResolvedValue(undefined),
+    flush: vi.fn().mockResolvedValue(undefined),
+    complete: vi.fn().mockResolvedValue(undefined),
+    abort: vi.fn().mockResolvedValue(undefined),
+    crash: vi.fn().mockResolvedValue(undefined),
   }
 
   let mockExit: ReturnType<typeof vi.spyOn>
@@ -57,7 +70,7 @@ describe('commands/run', () => {
     vi.mocked(templates.loadTemplate).mockResolvedValue('template content')
     vi.mocked(templates.substituteVars).mockReturnValue('substituted prompt')
     vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-    vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+    vi.mocked(persister.StreamPersisterImpl).mockImplementation(() => mockPersister as any)
     mockAgent.execute.mockResolvedValue({
       output: 'done',
       exitCode: 0,
@@ -144,18 +157,21 @@ describe('commands/run', () => {
     expect(mockAgent.execute).toHaveBeenCalledTimes(3)
   })
 
-  it('writes log after each iteration', async () => {
+  it('creates persister and calls complete for each iteration', async () => {
     await run('test-prd', { agent: 'claude', iterations: '2' })
 
-    expect(fs.writeFile).toHaveBeenCalledTimes(2)
-    expect(fs.writeFile).toHaveBeenCalledWith(
-      '/home/.ralph/prd/test-prd/iterations/0.log',
-      expect.stringContaining('# Iteration 0')
-    )
-    expect(fs.writeFile).toHaveBeenCalledWith(
-      '/home/.ralph/prd/test-prd/iterations/1.log',
-      expect.stringContaining('# Iteration 1')
-    )
+    // Persister created for each iteration
+    expect(persister.StreamPersisterImpl).toHaveBeenCalledTimes(2)
+    expect(persister.StreamPersisterImpl).toHaveBeenCalledWith({
+      logPath: '/home/.ralph/prd/test-prd/iterations/0.log',
+    })
+    expect(persister.StreamPersisterImpl).toHaveBeenCalledWith({
+      logPath: '/home/.ralph/prd/test-prd/iterations/1.log',
+    })
+
+    // Complete called for each iteration
+    expect(mockPersister.complete).toHaveBeenCalledTimes(2)
+    expect(mockPersister.complete).toHaveBeenCalledWith(0, 100)
   })
 
   it('passes substituted prompt to agent', async () => {
@@ -186,7 +202,7 @@ describe('commands/run', () => {
     await run('test-prd', { agent: 'claude', iterations: '1' })
 
     // Should still complete, just log the error
-    expect(fs.writeFile).toHaveBeenCalled()
+    expect(mockPersister.complete).toHaveBeenCalledWith(1, 100)
   })
 
   it('stops early when tasks complete marker found', async () => {
