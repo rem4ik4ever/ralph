@@ -6,6 +6,13 @@ import { fileURLToPath } from 'node:url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+export class BundledTemplateNotFoundError extends Error {
+  constructor(public readonly path: string) {
+    super(`Bundled template not found: ${path}. This is a packaging error.`)
+    this.name = 'BundledTemplateNotFoundError'
+  }
+}
+
 export function getClaudeDir(): string {
   return join(homedir(), '.claude')
 }
@@ -32,10 +39,18 @@ export function getBundledCommandPath(): string {
 
 export async function loadBundledSkill(): Promise<string> {
   const path = getBundledSkillPath()
-  return await readFile(path, 'utf-8')
+  try {
+    return await readFile(path, 'utf-8')
+  } catch {
+    throw new BundledTemplateNotFoundError(path)
+  }
 }
 
 export async function loadBundledCommand(): Promise<string> {
   const path = getBundledCommandPath()
-  return await readFile(path, 'utf-8')
+  try {
+    return await readFile(path, 'utf-8')
+  } catch {
+    throw new BundledTemplateNotFoundError(path)
+  }
 }

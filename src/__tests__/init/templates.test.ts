@@ -9,6 +9,7 @@ import {
   getBundledCommandPath,
   loadBundledSkill,
   loadBundledCommand,
+  BundledTemplateNotFoundError,
 } from '../../init/templates.js'
 
 vi.mock('node:fs/promises', () => ({
@@ -59,6 +60,12 @@ describe('init/templates', () => {
       expect(content).toBe('skill content')
       expect(readFile).toHaveBeenCalledWith(expect.stringContaining('ralph-prd-skill.md'), 'utf-8')
     })
+
+    it('throws BundledTemplateNotFoundError when file missing', async () => {
+      vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT'))
+
+      await expect(loadBundledSkill()).rejects.toThrow(BundledTemplateNotFoundError)
+    })
   })
 
   describe('loadBundledCommand', () => {
@@ -69,6 +76,12 @@ describe('init/templates', () => {
 
       expect(content).toBe('command content')
       expect(readFile).toHaveBeenCalledWith(expect.stringContaining('ralph-complete-next-task-command.md'), 'utf-8')
+    })
+
+    it('throws BundledTemplateNotFoundError when file missing', async () => {
+      vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT'))
+
+      await expect(loadBundledCommand()).rejects.toThrow(BundledTemplateNotFoundError)
     })
   })
 })

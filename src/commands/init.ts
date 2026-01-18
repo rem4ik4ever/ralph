@@ -10,6 +10,7 @@ import {
   getTargetCommandPath,
   loadBundledSkill,
   loadBundledCommand,
+  BundledTemplateNotFoundError,
 } from '../init/index.js'
 
 export interface InitOptions {
@@ -164,8 +165,18 @@ export async function installClaudeSkills(): Promise<void> {
   }
 
   // Load bundled templates
-  const skillContent = await loadBundledSkill()
-  const commandContent = await loadBundledCommand()
+  let skillContent: string
+  let commandContent: string
+  try {
+    skillContent = await loadBundledSkill()
+    commandContent = await loadBundledCommand()
+  } catch (err) {
+    if (err instanceof BundledTemplateNotFoundError) {
+      console.error(chalk.red('Failed to load bundled templates'))
+      console.error(chalk.gray('This may indicate a corrupted installation. Try reinstalling ralph.'))
+    }
+    throw err
+  }
 
   // Write skill
   const targetSkillDir = getTargetSkillDir()
