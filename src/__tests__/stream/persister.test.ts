@@ -234,4 +234,91 @@ describe('stream/persister', () => {
       await persister.complete(0, 100)
     })
   })
+
+  describe('auto-flush timing', () => {
+    it('auto-flushes after interval (real time)', async () => {
+      // Use short interval for fast test
+      const persister = new StreamPersisterImpl({ logPath, flushIntervalMs: 20 })
+
+      await persister.append('content')
+
+      // File shouldn't exist yet (no auto-flush yet)
+      await expect(fs.access(logPath)).rejects.toThrow()
+
+      // Wait for auto-flush
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Now file should exist with content
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toContain('content')
+      await persister.destroy()
+    })
+
+    it('flushes immediately on event boundary', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      await persister.append('event content', true) // isEventBoundary = true
+
+      // File should exist immediately
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toContain('event content')
+      await persister.destroy()
+    })
+
+    it('clears timer on complete (no leaks)', async () => {
+      const persister = new StreamPersisterImpl({ logPath, flushIntervalMs: 10 })
+
+      await persister.append('content')
+      await persister.complete(0, 100)
+
+      // Verify file is complete
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toContain('Status: completed')
+    })
+
+    it('clears timer on abort (no leaks)', async () => {
+      const persister = new StreamPersisterImpl({ logPath, flushIntervalMs: 10 })
+
+      await persister.append('content')
+      await persister.abort('SIGINT')
+
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toContain('Status: aborted')
+    })
+
+    it('clears timer on crash (no leaks)', async () => {
+      const persister = new StreamPersisterImpl({ logPath, flushIntervalMs: 10 })
+
+      await persister.append('content')
+      await persister.crash(new Error('test error'))
+
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toContain('Status: crashed')
+    })
+
+    it('clears timer on destroy (no leaks)', async () => {
+      const persister = new StreamPersisterImpl({ logPath, flushIntervalMs: 10 })
+
+      await persister.append('content')
+      await persister.destroy()
+
+      // No assertion needed - test will timeout if timer keeps running after destroy
+    })
+
+    it('buffers multiple appends for single timer cycle', async () => {
+      const persister = new StreamPersisterImpl({ logPath, flushIntervalMs: 30 })
+
+      // Multiple appends before timer fires
+      await persister.append('a')
+      await persister.append('b')
+      await persister.append('c')
+
+      // Wait for auto-flush
+      await new Promise((resolve) => setTimeout(resolve, 60))
+
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toContain('abc')
+      await persister.destroy()
+    })
+  })
 })

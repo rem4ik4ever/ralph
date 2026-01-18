@@ -13,10 +13,34 @@ export class StreamPersisterImpl implements StreamPersister {
   private headerWritten = false
   private writeError: Error | null = null
   private fileHandle: fs.FileHandle | null = null
+  private flushTimer: ReturnType<typeof setInterval> | null = null
+  private flushIntervalMs: number
 
   constructor(options: StreamPersisterOptions) {
     this.logPath = options.logPath
     this.startTime = Date.now()
+    this.flushIntervalMs = options.flushIntervalMs ?? 100
+  }
+
+  /**
+   * Starts the auto-flush timer if not already running
+   */
+  private startFlushTimer(): void {
+    if (this.flushTimer) return
+
+    this.flushTimer = setInterval(() => {
+      void this.flush()
+    }, this.flushIntervalMs)
+  }
+
+  /**
+   * Stops the auto-flush timer
+   */
+  private stopFlushTimer(): void {
+    if (!this.flushTimer) return
+
+    clearInterval(this.flushTimer)
+    this.flushTimer = null
   }
 
   /**
@@ -75,8 +99,13 @@ export class StreamPersisterImpl implements StreamPersister {
     }
   }
 
-  async append(content: string): Promise<void> {
+  async append(content: string, isEventBoundary = false): Promise<void> {
     this.buffer += content
+    this.startFlushTimer()
+
+    if (isEventBoundary) {
+      await this.flush()
+    }
   }
 
   async appendStderr(content: string): Promise<void> {
@@ -100,6 +129,7 @@ export class StreamPersisterImpl implements StreamPersister {
   }
 
   async complete(exitCode: number, duration: number): Promise<void> {
+    this.stopFlushTimer()
     this.status = 'completed'
     await this.flush()
     await this.writeMetadata({ exitCode, duration })
@@ -107,6 +137,7 @@ export class StreamPersisterImpl implements StreamPersister {
   }
 
   async abort(signal: string): Promise<void> {
+    this.stopFlushTimer()
     this.status = 'aborted'
     await this.flush()
     await this.writeMetadata({ signal })
@@ -114,6 +145,7 @@ export class StreamPersisterImpl implements StreamPersister {
   }
 
   async crash(error: Error): Promise<void> {
+    this.stopFlushTimer()
     this.status = 'crashed'
     await this.flush()
     await this.writeMetadata({ error: error.message })
@@ -168,6 +200,7 @@ export class StreamPersisterImpl implements StreamPersister {
    * Cleanup method for cases where persister is abandoned without complete/abort/crash
    */
   async destroy(): Promise<void> {
+    this.stopFlushTimer()
     await this.close()
   }
 }

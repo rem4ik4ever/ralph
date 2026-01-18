@@ -38,7 +38,7 @@
         "Clear timer on finalization to prevent leaks",
         "Unit tests cover flush timing scenarios"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "manager-3",

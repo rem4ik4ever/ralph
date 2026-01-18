@@ -20,8 +20,9 @@ export interface StreamPersister {
   /**
    * Append formatted content to buffer
    * Called for each formatted event
+   * @param isEventBoundary If true, triggers immediate flush
    */
-  append(content: string): Promise<void>
+  append(content: string, isEventBoundary?: boolean): Promise<void>
 
   /**
    * Append stderr content with [stderr] prefix

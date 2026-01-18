@@ -17,3 +17,11 @@
 - Added `destroy()` for cleanup without finalization
 - Files changed: `src/stream/persister.ts` (new), `src/__tests__/stream/persister.test.ts` (new)
 - **Learnings:** Use `fs.promises.FileHandle` over `createWriteStream` for simpler async/await patterns and reliable write completion
+
+## Task - manager-2
+- Added auto-flush interval timer (default 100ms, configurable via `flushIntervalMs`)
+- Timer starts on first `append()` call, not on construction
+- Added `isEventBoundary` param to `append()` for immediate flush on event completion
+- Timer cleared in `complete()`, `abort()`, `crash()`, `destroy()` to prevent leaks
+- Files changed: `src/stream/persister.ts`, `src/stream/types.ts`, `src/__tests__/stream/persister.test.ts`
+- **Learnings:** Fake timers + real async fs ops don't mix well in vitest; use real short intervals for timing tests
