@@ -63,7 +63,7 @@
         "Concurrent iteration writes don't conflict",
         "Unit tests cover error scenarios"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "command-1",

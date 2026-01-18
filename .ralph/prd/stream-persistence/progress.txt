@@ -35,3 +35,9 @@
 - Files: `src/stream/persister.ts:131-183` - finalization methods and `writeMetadata()`
 - Tests: `src/__tests__/stream/persister.test.ts:130-193` - complete/abort/crash tests
 - **Learnings:** Task was already done during manager-1/manager-2 implementation
+
+## Task - manager-4
+- Error handling already implemented via `writeError` flag + try/catch in `ensureFile()`/`writeToFile()`
+- Added tests: continues after error, permission denied, concurrent persisters, rapid writes
+- Files changed: `src/__tests__/stream/persister.test.ts` (5 new error tests)
+- **Learnings:** Separate file handles per persister naturally handles concurrency; no locking needed

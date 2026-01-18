@@ -233,6 +233,74 @@ describe('stream/persister', () => {
       await persister.flush()
       await persister.complete(0, 100)
     })
+
+    it('continues operating after write error', async () => {
+      // Create a directory to cause initial error
+      await fs.mkdir(logPath, { recursive: true })
+
+      const persister = new StreamPersisterImpl({ logPath })
+
+      // First operation fails
+      await persister.append('first')
+      await persister.flush()
+
+      // Subsequent operations should still not throw
+      await persister.append('second')
+      await persister.appendStderr('error')
+      await persister.abort('SIGINT')
+    })
+
+    it('handles permission denied on directory creation', async () => {
+      // Path with non-existent parent we can't create (on most systems / is not writable)
+      const badPath = '/nonexistent-root-dir/test/log.txt'
+      const persister = new StreamPersisterImpl({ logPath: badPath })
+
+      // Should not throw
+      await persister.append('content')
+      await persister.flush()
+      await persister.destroy()
+    })
+
+    it('concurrent persisters with different paths dont conflict', async () => {
+      const path1 = join(testDir, 'log1.txt')
+      const path2 = join(testDir, 'log2.txt')
+
+      const persister1 = new StreamPersisterImpl({ logPath: path1 })
+      const persister2 = new StreamPersisterImpl({ logPath: path2 })
+
+      // Interleaved operations
+      await persister1.append('p1-a')
+      await persister2.append('p2-a')
+      await persister1.append('p1-b')
+      await persister2.append('p2-b')
+
+      await Promise.all([persister1.complete(0, 100), persister2.complete(0, 200)])
+
+      const content1 = await fs.readFile(path1, 'utf8')
+      const content2 = await fs.readFile(path2, 'utf8')
+
+      expect(content1).toContain('p1-ap1-b')
+      expect(content2).toContain('p2-ap2-b')
+      expect(content1).not.toContain('p2')
+      expect(content2).not.toContain('p1')
+    })
+
+    it('handles rapid sequential writes without corruption', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      // Many rapid appends
+      const promises = []
+      for (let i = 0; i < 50; i++) {
+        promises.push(persister.append(`line-${i}\n`))
+      }
+      await Promise.all(promises)
+      await persister.complete(0, 100)
+
+      const content = await fs.readFile(logPath, 'utf8')
+      for (let i = 0; i < 50; i++) {
+        expect(content).toContain(`line-${i}`)
+      }
+    })
   })
 
   describe('auto-flush timing', () => {
