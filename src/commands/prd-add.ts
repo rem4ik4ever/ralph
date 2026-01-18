@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import { confirm } from '@inquirer/prompts'
 import { access, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getAgent, isValidAgent } from '../agents/index.js'
@@ -6,13 +7,28 @@ import {
   createPrdFolder,
   copyMarkdown,
   getPrdDir,
+  getPrdFileStatus,
   isProjectInitialized,
-  prdExists,
 } from '../prd/index.js'
 import { ensureTemplates, loadTemplate, substituteVars } from '../templates/index.js'
 
 export interface PrdAddOptions {
   agent: string
+}
+
+export async function promptOverride(
+  name: string,
+  location: string,
+): Promise<boolean> {
+  try {
+    return await confirm({
+      message: `PRD '${name}' already exists (${location}). Override?`,
+      default: false,
+    })
+  } catch {
+    // Ctrl+C
+    return false
+  }
 }
 
 export async function prdAdd(
@@ -35,26 +51,36 @@ export async function prdAdd(
     process.exit(1)
   }
 
-  // Check if PRD already exists in target location
-  // For initialized projects, only check local; otherwise check global
+  // Check PRD file status in target location
   const isInitialized = await isProjectInitialized()
   const checkLocation = isInitialized ? 'local' : 'global'
-  if (await prdExists(name, checkLocation)) {
-    const locationLabel = isInitialized ? 'local' : 'global'
-    console.error(chalk.red(`PRD already exists (${locationLabel}): ${name}`))
-    process.exit(1)
-  }
+  const fileStatus = await getPrdFileStatus(name, checkLocation)
 
   const prdDir = await getPrdDir(name, 'write')
   const prdJsonPath = join(prdDir, 'prd.json')
   const progressPath = join(prdDir, 'progress.txt')
 
+  // Handle based on file status
+  if (fileStatus === 'complete') {
+    // Fully registered PRD exists - prompt for override
+    const locationLabel = isInitialized ? 'local' : 'global'
+    const shouldOverride = await promptOverride(name, locationLabel)
+    if (!shouldOverride) {
+      console.log(chalk.gray('PRD creation cancelled'))
+      return
+    }
+  }
+
   console.log(chalk.blue(`Creating PRD: ${name}`))
 
-  // Create folder and copy markdown
+  // Create folder and copy markdown (skip copy if partial - md already exists)
   await createPrdFolder(name)
-  await copyMarkdown(path, name)
-  console.log(chalk.gray(`  Copied ${path} → prd.md`))
+  if (fileStatus !== 'partial') {
+    await copyMarkdown(path, name)
+    console.log(chalk.gray(`  Copied ${path} → prd.md`))
+  } else {
+    console.log(chalk.gray(`  Using existing prd.md`))
+  }
 
   // Ensure templates and load prd-md-to-json
   await ensureTemplates()

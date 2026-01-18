@@ -1,0 +1,46 @@
+{
+  "prdName": "streamline-prd-workflow",
+  "tasks": [
+    {
+      "id": "cli-1",
+      "category": "cli",
+      "description": "Smart existence check for prd add command - detect existing files and handle appropriately",
+      "steps": [
+        "prd add succeeds when only prd.md exists in target dir",
+        "prd add prompts when prd.md + prd.json + progress.txt exist",
+        "prd add with external file still copies to target dir",
+        "tests cover all three scenarios"
+      ],
+      "passes": true
+    },
+    {
+      "id": "init-1",
+      "category": "init",
+      "description": "Skill transformation appends post-creation steps for auto-registration",
+      "steps": [
+        "transformSkillContent() appends post-creation section",
+        "transformed skill contains ralph prd add instruction",
+        "transformed skill contains prompt about execution",
+        "ralph init in test project produces correct skill"
+      ],
+      "passes": false
+    }
+  ],
+  "context": {
+    "patterns": [
+      "src/commands/prd-add.ts:42-46 - current existence check (fails if dir exists)",
+      "src/init/templates.ts:54-94 - skill content transformation",
+      "prompts package for interactive prompts (already used in init.ts)"
+    ],
+    "keyFiles": [
+      "src/commands/prd-add.ts",
+      "src/init/templates.ts",
+      "src/prd/manager.ts"
+    ],
+    "nonGoals": [
+      "fully automated end-to-end (no user prompts)",
+      "changes to ralph run command",
+      "changes to prd.json format"
+    ]
+  }
+}
