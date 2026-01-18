@@ -1,20 +1,16 @@
 import chalk from 'chalk'
 import { select, confirm } from '@inquirer/prompts'
 import { access, mkdir, writeFile } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
+import { join } from 'node:path'
 import type { AgentType, InitConfig } from '../prd/types.js'
 import {
   getClaudeDir,
-  getSourceSkillPath,
-  getSourceCommandPath,
   getTargetSkillDir,
   getTargetSkillPath,
   getTargetCommandPath,
-  readSourceSkill,
-  readSourceCommand,
-  transformSkillContent,
-  transformCommandContent,
-  SourceFileNotFoundError,
+  loadBundledSkill,
+  loadBundledCommand,
+  BundledTemplateNotFoundError,
 } from '../init/index.js'
 
 export interface InitOptions {
@@ -168,46 +164,27 @@ export async function installClaudeSkills(): Promise<void> {
     throw err
   }
 
-  // Read and transform skill
+  // Load bundled templates
   let skillContent: string
-  try {
-    skillContent = await readSourceSkill()
-  } catch (err) {
-    if (err instanceof SourceFileNotFoundError) {
-      console.error(chalk.red(`Source skill not found: ${getSourceSkillPath()}`))
-      console.error(chalk.gray('Install the prd skill globally first:'))
-      console.error(chalk.gray('  mkdir -p ~/.claude/skills/prd'))
-      console.error(chalk.gray('  # Copy SKILL.md to ~/.claude/skills/prd/'))
-      throw err
-    }
-    throw err
-  }
-
-  const transformedSkill = transformSkillContent(skillContent)
-
-  // Read and transform command
   let commandContent: string
   try {
-    commandContent = await readSourceCommand()
+    skillContent = await loadBundledSkill()
+    commandContent = await loadBundledCommand()
   } catch (err) {
-    if (err instanceof SourceFileNotFoundError) {
-      console.error(chalk.red(`Source command not found: ${getSourceCommandPath()}`))
-      console.error(chalk.gray('Install the complete-next-task command globally first:'))
-      console.error(chalk.gray('  # Copy complete-next-task.md to ~/.claude/commands/'))
-      throw err
+    if (err instanceof BundledTemplateNotFoundError) {
+      console.error(chalk.red('Failed to load bundled templates'))
+      console.error(chalk.gray('This may indicate a corrupted installation. Try reinstalling ralph.'))
     }
     throw err
   }
 
-  const transformedCommand = transformCommandContent(commandContent)
-
-  // Write transformed skill
+  // Write skill
   const targetSkillDir = getTargetSkillDir()
   const targetSkillPath = getTargetSkillPath()
 
   try {
     await mkdir(targetSkillDir, { recursive: true })
-    await writeFile(targetSkillPath, transformedSkill)
+    await writeFile(targetSkillPath, skillContent)
     console.log(chalk.green(`✓ Installed skill: ${targetSkillPath}`))
   } catch (err) {
     const error = err as NodeJS.ErrnoException
@@ -219,11 +196,11 @@ export async function installClaudeSkills(): Promise<void> {
     throw err
   }
 
-  // Write transformed command
+  // Write command
   const targetCommandPath = getTargetCommandPath()
 
   try {
-    await writeFile(targetCommandPath, transformedCommand)
+    await writeFile(targetCommandPath, commandContent)
     console.log(chalk.green(`✓ Installed command: ${targetCommandPath}`))
   } catch (err) {
     const error = err as NodeJS.ErrnoException
