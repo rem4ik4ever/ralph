@@ -28,3 +28,11 @@
 - Uses `rm` with `recursive: true` to remove entire PRD directory
 - Uses `@inquirer/prompts` confirm (same as prd-add)
 - **Files:** src/commands/prd-delete.ts, src/index.ts
+
+## Task - templates-1
+- Created `templates/ralph-skill.md` with frontmatter (name, description)
+- Documented all commands: init, prd add, prd list, prd info, prd delete, run
+- Described PRD lifecycle: create → add → run
+- Documented file structure (.ralph/, prd.json, progress.txt)
+- Included common workflows: start feature, check progress, cleanup
+- **Files:** templates/ralph-skill.md

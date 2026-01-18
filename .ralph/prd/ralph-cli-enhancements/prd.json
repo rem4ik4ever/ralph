@@ -57,7 +57,7 @@
         "Document file structure (.ralph/prd/<name>/)",
         "Include common workflows"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "cli-1",
