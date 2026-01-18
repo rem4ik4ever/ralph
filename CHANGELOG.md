@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/rem4ik4ever/ralph/compare/v1.3.0...v1.3.1) (2026-01-18)
+
+### Bug Fixes
+
+* **init:** address code review findings ([e283ffb](https://github.com/rem4ik4ever/ralph/commit/e283ffb7ac38a0dbd5342558b37ef10359339960))
+* **init:** bundle skill templates instead of reading from source ([a937e90](https://github.com/rem4ik4ever/ralph/commit/a937e9004c867048a856037e7a53c4572388478b))
+
 ## [1.3.0](https://github.com/rem4ik4ever/ralph/compare/v1.2.1...v1.3.0) (2026-01-18)
 
 ### Features
