@@ -90,7 +90,7 @@
         "Register uncaughtException handler - calls crash()",
         "Integration test with signals passes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "testing-1",

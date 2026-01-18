@@ -51,3 +51,15 @@
 - Files changed: `src/agents/base.ts`, `src/agents/claude.ts`, `src/commands/run.ts`
 - Tests updated: `src/__tests__/commands/run.test.ts`, `src/__tests__/integration/prd-workflow.test.ts`
 - **Learnings:** Using callbacks (`onPersist`, `onStderr`) keeps agent decoupled from persistence implementation
+
+## Task - command-2
+- Created `SignalHandlers` class to manage signal registration/unregistration
+- Registered handlers for SIGINT, SIGTERM, SIGHUP using `process.addListener` (not replacing existing handlers)
+- Registered uncaughtException handler for crash scenarios
+- Each signal handler calls `persister.abort(signal)` with correct signal name
+- Crash handler calls `persister.crash(error)` with the error
+- Exit codes: SIGINT=130 (128+2), SIGTERM=143 (128+15), SIGHUP=129 (128+1), crash=1
+- Handlers properly unregistered after run completes or on signal/crash
+- Files changed: `src/commands/run.ts` (SignalHandlers class + integration)
+- Tests: `src/__tests__/commands/run.test.ts` (5 new signal handling tests)
+- **Learnings:** Testing signal handlers requires non-throwing process.exit mock to avoid unhandled rejections in vitest

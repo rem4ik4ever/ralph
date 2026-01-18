@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { getAgent, isValidAgent } from '../agents/index.js'
 import { getPrd, getPrdDir, prdExists } from '../prd/index.js'
 import { StreamPersisterImpl } from '../stream/persister.js'
+import type { StreamPersister } from '../stream/types.js'
 import { ensureTemplates, loadTemplate, substituteVars } from '../templates/index.js'
 
 const TASKS_COMPLETE_MARKER = '<tasks>COMPLETE</tasks>'
@@ -11,6 +12,73 @@ const TASKS_COMPLETE_MARKER = '<tasks>COMPLETE</tasks>'
 export interface RunOptions {
   agent: string
   iterations: string
+}
+
+type SignalType = 'SIGINT' | 'SIGTERM' | 'SIGHUP'
+
+/**
+ * Signal handler manager for graceful interruption
+ */
+class SignalHandlers {
+  private activePersister: StreamPersister | null = null
+  private handlers = new Map<SignalType | 'uncaughtException', (...args: unknown[]) => void>()
+  private aborted = false
+
+  register(): void {
+    const signals: SignalType[] = ['SIGINT', 'SIGTERM', 'SIGHUP']
+
+    for (const signal of signals) {
+      const handler = () => void this.handleSignal(signal)
+      this.handlers.set(signal, handler)
+      process.addListener(signal, handler)
+    }
+
+    const exceptionHandler = (err: unknown) =>
+      void this.handleCrash(err instanceof Error ? err : new Error(String(err)))
+    this.handlers.set('uncaughtException', exceptionHandler)
+    process.addListener('uncaughtException', exceptionHandler as NodeJS.UncaughtExceptionListener)
+  }
+
+  unregister(): void {
+    const signals: SignalType[] = ['SIGINT', 'SIGTERM', 'SIGHUP']
+    for (const signal of signals) {
+      const handler = this.handlers.get(signal)
+      if (handler) process.removeListener(signal, handler)
+    }
+
+    const exceptionHandler = this.handlers.get('uncaughtException')
+    if (exceptionHandler) process.removeListener('uncaughtException', exceptionHandler)
+
+    this.handlers.clear()
+  }
+
+  setPersister(persister: StreamPersister | null): void {
+    this.activePersister = persister
+  }
+
+  wasAborted(): boolean {
+    return this.aborted
+  }
+
+  private async handleSignal(signal: SignalType): Promise<void> {
+    this.aborted = true
+    if (this.activePersister) {
+      await this.activePersister.abort(signal)
+      this.activePersister = null
+    }
+    this.unregister()
+    process.exit(128 + (signal === 'SIGINT' ? 2 : signal === 'SIGTERM' ? 15 : 1))
+  }
+
+  private async handleCrash(error: Error): Promise<void> {
+    if (this.activePersister) {
+      await this.activePersister.crash(error)
+      this.activePersister = null
+    }
+    this.unregister()
+    console.error(chalk.red(`Uncaught exception: ${error.message}`))
+    process.exit(1)
+  }
 }
 
 export async function run(prdName: string, opts: RunOptions): Promise<void> {
@@ -62,43 +130,53 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
   console.log(chalk.gray(`Iterations: ${iterations}`))
   console.log()
 
+  // Set up signal handlers for graceful interruption
+  const signalHandlers = new SignalHandlers()
+  signalHandlers.register()
+
   // Run loop
   let completed = false
   let actualIterations = 0
 
-  for (let i = 0; i < iterations; i++) {
-    actualIterations++
-    console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
-    console.log()
+  try {
+    for (let i = 0; i < iterations; i++) {
+      actualIterations++
+      console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
+      console.log()
 
-    const logPath = join(iterationsDir, `${i}.log`)
-    const persister = new StreamPersisterImpl({ logPath })
+      const logPath = join(iterationsDir, `${i}.log`)
+      const persister = new StreamPersisterImpl({ logPath })
+      signalHandlers.setPersister(persister)
 
-    const result = await agent.execute(prompt, process.cwd(), {
-      onOutput: (chunk) => process.stdout.write(chunk),
-      onPersist: (chunk, isEventBoundary) => {
-        void persister.append(chunk, isEventBoundary)
-      },
-      onStderr: (chunk) => {
-        void persister.appendStderr(chunk)
-      },
-    })
+      const result = await agent.execute(prompt, process.cwd(), {
+        onOutput: (chunk) => process.stdout.write(chunk),
+        onPersist: (chunk, isEventBoundary) => {
+          void persister.append(chunk, isEventBoundary)
+        },
+        onStderr: (chunk) => {
+          void persister.appendStderr(chunk)
+        },
+      })
 
-    await persister.complete(result.exitCode, result.duration)
-    console.log()
+      signalHandlers.setPersister(null)
+      await persister.complete(result.exitCode, result.duration)
+      console.log()
 
-    if (result.exitCode !== 0) {
-      console.log(chalk.red(`  Exit code: ${result.exitCode}`))
-    } else {
-      console.log(chalk.green(`  Done (${result.duration}ms)`))
+      if (result.exitCode !== 0) {
+        console.log(chalk.red(`  Exit code: ${result.exitCode}`))
+      } else {
+        console.log(chalk.green(`  Done (${result.duration}ms)`))
+      }
+
+      // Check for completion marker
+      if (result.output.includes(TASKS_COMPLETE_MARKER)) {
+        console.log(chalk.cyan(`  All tasks complete`))
+        completed = true
+        break
+      }
     }
-
-    // Check for completion marker
-    if (result.output.includes(TASKS_COMPLETE_MARKER)) {
-      console.log(chalk.cyan(`  All tasks complete`))
-      completed = true
-      break
-    }
+  } finally {
+    signalHandlers.unregister()
   }
 
   console.log()

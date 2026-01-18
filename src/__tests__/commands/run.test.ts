@@ -251,4 +251,124 @@ describe('commands/run', () => {
       expect.stringContaining('Pending tasks: 1/2')
     )
   })
+
+  describe('signal handling', () => {
+    it('registers signal handlers during run', async () => {
+      const addListenerSpy = vi.spyOn(process, 'addListener')
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(addListenerSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function))
+      expect(addListenerSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function))
+      expect(addListenerSpy).toHaveBeenCalledWith('SIGHUP', expect.any(Function))
+      expect(addListenerSpy).toHaveBeenCalledWith('uncaughtException', expect.any(Function))
+
+      addListenerSpy.mockRestore()
+    })
+
+    it('unregisters signal handlers after run completes', async () => {
+      const removeListenerSpy = vi.spyOn(process, 'removeListener')
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(removeListenerSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function))
+      expect(removeListenerSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function))
+      expect(removeListenerSpy).toHaveBeenCalledWith('SIGHUP', expect.any(Function))
+      expect(removeListenerSpy).toHaveBeenCalledWith('uncaughtException', expect.any(Function))
+
+      removeListenerSpy.mockRestore()
+    })
+
+    it('calls abort on persister when SIGINT received during execute', async () => {
+      // Use non-throwing exit mock for signal tests
+      mockExit.mockRestore()
+      const exitCodes: number[] = []
+      mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+        exitCodes.push(code as number)
+        return undefined as never
+      })
+
+      const handlers: Record<string, () => void> = {}
+      const addListenerSpy = vi.spyOn(process, 'addListener').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as () => void
+        return process
+      })
+      const removeListenerSpy = vi.spyOn(process, 'removeListener').mockReturnValue(process)
+
+      mockAgent.execute.mockImplementation(async () => {
+        handlers['SIGINT']()
+        await new Promise((r) => setImmediate(r))
+        return { output: '', exitCode: 0, duration: 100 }
+      })
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(mockPersister.abort).toHaveBeenCalledWith('SIGINT')
+      expect(exitCodes).toContain(130) // 128 + 2
+
+      addListenerSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+    })
+
+    it('calls abort on persister when SIGTERM received', async () => {
+      mockExit.mockRestore()
+      const exitCodes: number[] = []
+      mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+        exitCodes.push(code as number)
+        return undefined as never
+      })
+
+      const handlers: Record<string, () => void> = {}
+      const addListenerSpy = vi.spyOn(process, 'addListener').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as () => void
+        return process
+      })
+      const removeListenerSpy = vi.spyOn(process, 'removeListener').mockReturnValue(process)
+
+      mockAgent.execute.mockImplementation(async () => {
+        handlers['SIGTERM']()
+        await new Promise((r) => setImmediate(r))
+        return { output: '', exitCode: 0, duration: 100 }
+      })
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(mockPersister.abort).toHaveBeenCalledWith('SIGTERM')
+      expect(exitCodes).toContain(143) // 128 + 15
+
+      addListenerSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+    })
+
+    it('calls crash on persister when uncaughtException received', async () => {
+      mockExit.mockRestore()
+      const exitCodes: number[] = []
+      mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+        exitCodes.push(code as number)
+        return undefined as never
+      })
+
+      const handlers: Record<string, (err: Error) => void> = {}
+      const addListenerSpy = vi.spyOn(process, 'addListener').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as (err: Error) => void
+        return process
+      })
+      const removeListenerSpy = vi.spyOn(process, 'removeListener').mockReturnValue(process)
+
+      const testError = new Error('test crash')
+      mockAgent.execute.mockImplementation(async () => {
+        handlers['uncaughtException'](testError)
+        await new Promise((r) => setImmediate(r))
+        return { output: '', exitCode: 0, duration: 100 }
+      })
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(mockPersister.crash).toHaveBeenCalledWith(testError)
+      expect(exitCodes).toContain(1)
+
+      addListenerSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+    })
+  })
 })
