@@ -1,0 +1,10 @@
+## Codebase Patterns
+- Types defined in dedicated `types.ts` files per module (see `src/prd/types.ts`, `src/agents/base.ts`)
+- Interfaces use JSDoc comments for documentation
+- Type unions for status enums (e.g., `'pending' | 'in_progress' | 'completed'`)
+
+## Task - types-1
+- Created `src/stream/types.ts` with StreamPersister interface
+- Defined: `StreamStatus`, `StreamPersisterOptions`, `StreamPersister` interface
+- Files changed: `src/stream/types.ts` (new)
+- **Learnings:** TypeScript compiles new files automatically, no explicit registration needed
