@@ -1,3 +1,10 @@
+## [1.4.0](https://github.com/rem4ik4ever/ralph/compare/v1.3.1...v1.4.0) (2026-01-18)
+
+### Features
+
+* **init:** add post-creation steps to ralph-prd skill ([a1a8ccf](https://github.com/rem4ik4ever/ralph/commit/a1a8ccf5ca1386429fa9d336d68a8ebe8e433f6e))
+* **prd:** smart existence check for prd add command ([275eb32](https://github.com/rem4ik4ever/ralph/commit/275eb320985f160bcbd0955f2c84039ca5e1b659))
+
 ## [1.3.1](https://github.com/rem4ik4ever/ralph/compare/v1.3.0...v1.3.1) (2026-01-18)
 
 ### Bug Fixes
