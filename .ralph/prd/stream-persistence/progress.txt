@@ -1,0 +1,74 @@
+## Codebase Patterns
+- Types defined in dedicated `types.ts` files per module (see `src/prd/types.ts`, `src/agents/base.ts`)
+- Interfaces use JSDoc comments for documentation
+- Type unions for status enums (e.g., `'pending' | 'in_progress' | 'completed'`)
+
+## Task - types-1
+- Created `src/stream/types.ts` with StreamPersister interface
+- Defined: `StreamStatus`, `StreamPersisterOptions`, `StreamPersister` interface
+- Files changed: `src/stream/types.ts` (new)
+- **Learnings:** TypeScript compiles new files automatically, no explicit registration needed
+
+## Task - manager-1
+- Created `StreamPersisterImpl` class in `src/stream/persister.ts`
+- Buffer accumulation via `append()`, `appendStderr()` with `[stderr]` prefix
+- Efficient file handle via `fs.promises.open()` - single handle reused across writes
+- `flush()` writes buffer to disk atomically (complete string per write call)
+- Added `destroy()` for cleanup without finalization
+- Files changed: `src/stream/persister.ts` (new), `src/__tests__/stream/persister.test.ts` (new)
+- **Learnings:** Use `fs.promises.FileHandle` over `createWriteStream` for simpler async/await patterns and reliable write completion
+
+## Task - manager-2
+- Added auto-flush interval timer (default 100ms, configurable via `flushIntervalMs`)
+- Timer starts on first `append()` call, not on construction
+- Added `isEventBoundary` param to `append()` for immediate flush on event completion
+- Timer cleared in `complete()`, `abort()`, `crash()`, `destroy()` to prevent leaks
+- Files changed: `src/stream/persister.ts`, `src/stream/types.ts`, `src/__tests__/stream/persister.test.ts`
+- **Learnings:** Fake timers + real async fs ops don't mix well in vitest; use real short intervals for timing tests
+
+## Task - manager-3
+- Already implemented in previous commits
+- `complete(exitCode, duration)` writes metadata separator, status, exit code, duration
+- `abort(signal)` writes status + "Interrupted: {signal}"
+- `crash(error)` writes status + "Error: {message}"
+- Header written lazily on first flush with `Status: in_progress`
+- Files: `src/stream/persister.ts:131-183` - finalization methods and `writeMetadata()`
+- Tests: `src/__tests__/stream/persister.test.ts:130-193` - complete/abort/crash tests
+- **Learnings:** Task was already done during manager-1/manager-2 implementation
+
+## Task - manager-4
+- Error handling already implemented via `writeError` flag + try/catch in `ensureFile()`/`writeToFile()`
+- Added tests: continues after error, permission denied, concurrent persisters, rapid writes
+- Files changed: `src/__tests__/stream/persister.test.ts` (5 new error tests)
+- **Learnings:** Separate file handles per persister naturally handles concurrency; no locking needed
+
+## Task - command-1
+- Added `onPersist` and `onStderr` callbacks to `ExecuteOptions` in `src/agents/base.ts`
+- Updated `claude.ts` to call `onPersist()` for each formatted event with `isEventBoundary=true`
+- Updated `claude.ts` to call `onStderr()` for stderr data
+- `run.ts` instantiates `StreamPersisterImpl` per iteration, wires callbacks
+- Removed old `writeIterationLog()` function - persister handles log writing now
+- Files changed: `src/agents/base.ts`, `src/agents/claude.ts`, `src/commands/run.ts`
+- Tests updated: `src/__tests__/commands/run.test.ts`, `src/__tests__/integration/prd-workflow.test.ts`
+- **Learnings:** Using callbacks (`onPersist`, `onStderr`) keeps agent decoupled from persistence implementation
+
+## Task - command-2
+- Created `SignalHandlers` class to manage signal registration/unregistration
+- Registered handlers for SIGINT, SIGTERM, SIGHUP using `process.addListener` (not replacing existing handlers)
+- Registered uncaughtException handler for crash scenarios
+- Each signal handler calls `persister.abort(signal)` with correct signal name
+- Crash handler calls `persister.crash(error)` with the error
+- Exit codes: SIGINT=130 (128+2), SIGTERM=143 (128+15), SIGHUP=129 (128+1), crash=1
+- Handlers properly unregistered after run completes or on signal/crash
+- Files changed: `src/commands/run.ts` (SignalHandlers class + integration)
+- Tests: `src/__tests__/commands/run.test.ts` (5 new signal handling tests)
+- **Learnings:** Testing signal handlers requires non-throwing process.exit mock to avoid unhandled rejections in vitest
+
+## Task - testing-1
+- Added 11 new comprehensive tests for stream persistence
+- `incremental persistence` suite: terminal display order, ctrl+c preserves partial content, crash preserves buffer
+- `log format compatibility` suite: header structure, metadata separator, abort includes signal, crash includes error
+- `metadata correctness` suite: in_progress before finalization, completed with exit codes, duration in ms
+- Files changed: `src/__tests__/stream/persister.test.ts` (11 new tests)
+- Total tests now: 38 in persister.test.ts, 188 across project
+- **Learnings:** Header writes at first flush with current status; test structure must account for when header is written

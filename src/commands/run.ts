@@ -1,8 +1,11 @@
 import chalk from 'chalk'
-import { mkdir, writeFile } from 'node:fs/promises'
+import type { ChildProcess } from 'node:child_process'
+import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getAgent, isValidAgent } from '../agents/index.js'
 import { getPrd, getPrdDir, prdExists } from '../prd/index.js'
+import { StreamPersisterImpl } from '../stream/persister.js'
+import type { StreamPersister } from '../stream/types.js'
 import { ensureTemplates, loadTemplate, substituteVars } from '../templates/index.js'
 
 const TASKS_COMPLETE_MARKER = '<tasks>COMPLETE</tasks>'
@@ -10,6 +13,103 @@ const TASKS_COMPLETE_MARKER = '<tasks>COMPLETE</tasks>'
 export interface RunOptions {
   agent: string
   iterations: string
+}
+
+type SignalType = 'SIGINT' | 'SIGTERM' | 'SIGHUP'
+
+const SIGNAL_EXIT_CODES: Record<SignalType, number> = {
+  SIGINT: 130, // 128 + 2
+  SIGTERM: 143, // 128 + 15
+  SIGHUP: 129, // 128 + 1
+}
+
+/**
+ * Signal handler manager for graceful interruption
+ */
+class SignalHandlers {
+  private activePersister: StreamPersister | null = null
+  private activeProcess: ChildProcess | null = null
+  private handlers = new Map<SignalType | 'uncaughtException', (...args: unknown[]) => void>()
+  private aborted = false
+  private handling = false // re-entrancy guard
+
+  register(): void {
+    const signals: SignalType[] = ['SIGINT', 'SIGTERM', 'SIGHUP']
+
+    for (const signal of signals) {
+      const handler = () => void this.handleSignal(signal)
+      this.handlers.set(signal, handler)
+      process.addListener(signal, handler)
+    }
+
+    const exceptionHandler = (err: unknown) =>
+      void this.handleCrash(err instanceof Error ? err : new Error(String(err)))
+    this.handlers.set('uncaughtException', exceptionHandler)
+    process.addListener('uncaughtException', exceptionHandler as NodeJS.UncaughtExceptionListener)
+  }
+
+  unregister(): void {
+    const signals: SignalType[] = ['SIGINT', 'SIGTERM', 'SIGHUP']
+    for (const signal of signals) {
+      const handler = this.handlers.get(signal)
+      if (handler) process.removeListener(signal, handler)
+    }
+
+    const exceptionHandler = this.handlers.get('uncaughtException')
+    if (exceptionHandler) process.removeListener('uncaughtException', exceptionHandler)
+
+    this.handlers.clear()
+  }
+
+  setPersister(persister: StreamPersister | null): void {
+    this.activePersister = persister
+  }
+
+  setProcess(proc: ChildProcess | null): void {
+    this.activeProcess = proc
+  }
+
+  wasAborted(): boolean {
+    return this.aborted
+  }
+
+  private async handleSignal(signal: SignalType): Promise<void> {
+    if (this.handling) return // re-entrancy guard
+    this.handling = true
+    this.aborted = true
+
+    // Kill child process first
+    if (this.activeProcess && !this.activeProcess.killed) {
+      this.activeProcess.kill(signal)
+      this.activeProcess = null
+    }
+
+    if (this.activePersister) {
+      await this.activePersister.abort(signal)
+      this.activePersister = null
+    }
+    this.unregister()
+    process.exit(SIGNAL_EXIT_CODES[signal])
+  }
+
+  private async handleCrash(error: Error): Promise<void> {
+    if (this.handling) return // re-entrancy guard
+    this.handling = true
+
+    // Kill child process
+    if (this.activeProcess && !this.activeProcess.killed) {
+      this.activeProcess.kill()
+      this.activeProcess = null
+    }
+
+    if (this.activePersister) {
+      await this.activePersister.crash(error)
+      this.activePersister = null
+    }
+    this.unregister()
+    console.error(chalk.red(`Uncaught exception: ${error.message}`))
+    process.exit(1)
+  }
 }
 
 export async function run(prdName: string, opts: RunOptions): Promise<void> {
@@ -61,34 +161,72 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
   console.log(chalk.gray(`Iterations: ${iterations}`))
   console.log()
 
+  // Set up signal handlers for graceful interruption
+  const signalHandlers = new SignalHandlers()
+  signalHandlers.register()
+
   // Run loop
   let completed = false
   let actualIterations = 0
 
-  for (let i = 0; i < iterations; i++) {
-    actualIterations++
-    console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
-    console.log()
+  try {
+    for (let i = 0; i < iterations; i++) {
+      actualIterations++
+      console.log(chalk.yellow(`[${i + 1}/${iterations}] Running ${agent.name}...`))
+      console.log()
 
-    const result = await agent.execute(prompt, process.cwd(), {
-      onOutput: (chunk) => process.stdout.write(chunk),
-    })
+      const logPath = join(iterationsDir, `${i}.log`)
+      const persister = new StreamPersisterImpl({ logPath })
+      signalHandlers.setPersister(persister)
 
-    console.log()
-    await writeIterationLog(iterationsDir, i, result)
+      let result
+      try {
+        result = await agent.execute(prompt, process.cwd(), {
+          onOutput: (chunk) => process.stdout.write(chunk),
+          onPersist: (chunk, isEventBoundary) => {
+            void persister.append(chunk, isEventBoundary)
+          },
+          onStderr: (chunk) => {
+            void persister.appendStderr(chunk)
+          },
+          onProcess: (proc) => signalHandlers.setProcess(proc),
+        })
+      } catch (err) {
+        // Execution failed - persist crash state and re-throw
+        await persister.crash(err instanceof Error ? err : new Error(String(err)))
+        signalHandlers.setPersister(null)
+        signalHandlers.setProcess(null)
+        throw err
+      }
 
-    if (result.exitCode !== 0) {
-      console.log(chalk.red(`  Exit code: ${result.exitCode}`))
-    } else {
-      console.log(chalk.green(`  Done (${result.duration}ms)`))
+      signalHandlers.setProcess(null)
+      // Complete THEN clear persister (fixes race with signal handlers)
+      await persister.complete(result.exitCode, result.duration)
+      signalHandlers.setPersister(null)
+
+      // Check for persistence errors
+      const persistError = persister.getError()
+      if (persistError) {
+        console.log(chalk.yellow(`  Warning: log write error: ${persistError.message}`))
+      }
+
+      console.log()
+
+      if (result.exitCode !== 0) {
+        console.log(chalk.red(`  Exit code: ${result.exitCode}`))
+      } else {
+        console.log(chalk.green(`  Done (${result.duration}ms)`))
+      }
+
+      // Check for completion marker
+      if (result.output.includes(TASKS_COMPLETE_MARKER)) {
+        console.log(chalk.cyan(`  All tasks complete`))
+        completed = true
+        break
+      }
     }
-
-    // Check for completion marker
-    if (result.output.includes(TASKS_COMPLETE_MARKER)) {
-      console.log(chalk.cyan(`  All tasks complete`))
-      completed = true
-      break
-    }
+  } finally {
+    signalHandlers.unregister()
   }
 
   console.log()
@@ -98,29 +236,4 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
     console.log(chalk.yellow(`Reached max iterations (${iterations})`))
   }
   console.log(chalk.gray(`Logs: ${iterationsDir}`))
-}
-
-interface IterationResult {
-  output: string
-  exitCode: number
-  duration: number
-}
-
-async function writeIterationLog(
-  iterationsDir: string,
-  iteration: number,
-  result: IterationResult
-): Promise<void> {
-  const logPath = join(iterationsDir, `${iteration}.log`)
-
-  const header = [
-    `# Iteration ${iteration}`,
-    `Timestamp: ${new Date().toISOString()}`,
-    `Duration: ${result.duration}ms`,
-    `Exit Code: ${result.exitCode}`,
-    '---',
-    '',
-  ].join('\n')
-
-  await writeFile(logPath, header + result.output)
 }

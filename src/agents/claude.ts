@@ -11,6 +11,9 @@ export const claude: Agent = {
   async execute(prompt: string, cwd: string, options?: ExecuteOptions): Promise<AgentResult> {
     const startTime = Date.now()
     const onOutput = options?.onOutput
+    const onPersist = options?.onPersist
+    const onStderr = options?.onStderr
+    const onProcess = options?.onProcess
 
     return new Promise((resolve, reject) => {
       const proc = spawn('claude', [
@@ -24,6 +27,9 @@ export const claude: Agent = {
         shell: true,
       })
 
+      // Expose process for signal handling
+      onProcess?.(proc)
+
       let rawOutput = ''
       let textOutput = ''
       let stderr = ''
@@ -33,6 +39,8 @@ export const claude: Agent = {
           const formatted = formatEvent(event)
           if (formatted) {
             onOutput?.(formatted + '\n')
+            // Persist with event boundary flag (event is complete)
+            onPersist?.(formatted + '\n', true)
           }
 
           // Accumulate text content for completion marker detection
@@ -45,7 +53,9 @@ export const claude: Agent = {
           }
         },
         (_error, line) => {
-          onOutput?.(chalk.yellow(`[warn] malformed JSON: ${line.slice(0, 100)}\n`))
+          const warning = chalk.yellow(`[warn] malformed JSON: ${line.slice(0, 100)}\n`)
+          onOutput?.(warning)
+          onPersist?.(warning, false)
         }
       )
 
@@ -59,6 +69,7 @@ export const claude: Agent = {
         const chunk = data.toString()
         stderr += chunk
         onOutput?.(chalk.red(chunk))
+        onStderr?.(chunk)
       })
 
       proc.on('error', (err) => {

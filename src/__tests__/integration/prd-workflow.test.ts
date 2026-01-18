@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mkdtemp, rm, writeFile, mkdir, access, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import * as persister from '../../stream/persister.js'
 
 // Create temp directory before importing modules that use homedir
 let tempDir: string
@@ -29,6 +30,10 @@ vi.mock('../../templates/templates.js', () => ({
   substituteVars: vi.fn(),
 }))
 
+vi.mock('../../stream/persister.js', () => ({
+  StreamPersisterImpl: vi.fn(),
+}))
+
 describe('integration/prd-workflow', () => {
   let mockAgent: { name: string; execute: ReturnType<typeof vi.fn> }
   let mockConsoleLog: ReturnType<typeof vi.spyOn>
@@ -40,6 +45,16 @@ describe('integration/prd-workflow', () => {
   let agents: typeof import('../../agents/index.js')
   let prdManager: typeof import('../../prd/manager.js')
   let templates: typeof import('../../templates/templates.js')
+
+  const mockPersister = {
+    append: vi.fn().mockResolvedValue(undefined),
+    appendStderr: vi.fn().mockResolvedValue(undefined),
+    flush: vi.fn().mockResolvedValue(undefined),
+    complete: vi.fn().mockResolvedValue(undefined),
+    abort: vi.fn().mockResolvedValue(undefined),
+    crash: vi.fn().mockResolvedValue(undefined),
+    getError: vi.fn().mockReturnValue(null),
+  }
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -64,6 +79,9 @@ describe('integration/prd-workflow', () => {
     }
     vi.mocked(agents.isValidAgent).mockReturnValue(true)
     vi.mocked(agents.getAgent).mockReturnValue(mockAgent)
+
+    // Mock persister
+    vi.mocked(persister.StreamPersisterImpl).mockImplementation(() => mockPersister as any)
 
     // Mock console methods
     mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -264,5 +282,47 @@ describe('integration/prd-workflow', () => {
 
     const prds = await prdManager.listPrds()
     expect(prds).toEqual([])
+  })
+
+  it('run creates persister and calls complete for each iteration', async () => {
+    const { run } = await import('../../commands/run.js')
+
+    // Setup PRD
+    const prdDir = join(tempDir, 'persist-test')
+    await mkdir(prdDir, { recursive: true })
+    await writeFile(
+      join(prdDir, 'prd.json'),
+      JSON.stringify({
+        prdName: 'persist-test',
+        tasks: [{ id: 't1', passes: false }],
+      })
+    )
+
+    vi.mocked(prdManager.prdExists).mockResolvedValue(true)
+    vi.mocked(prdManager.getPrd).mockResolvedValue({
+      prdName: 'persist-test',
+      tasks: [{ id: 't1', category: 'test', description: 'Test', steps: [], passes: false }],
+    })
+
+    mockAgent.execute.mockResolvedValue({
+      output: 'done',
+      exitCode: 0,
+      duration: 150,
+    })
+
+    await run('persist-test', { agent: 'claude', iterations: '2' })
+
+    // Persister created for each iteration
+    expect(persister.StreamPersisterImpl).toHaveBeenCalledTimes(2)
+    expect(persister.StreamPersisterImpl).toHaveBeenNthCalledWith(1, {
+      logPath: join(tempDir, 'persist-test', 'iterations', '0.log'),
+    })
+    expect(persister.StreamPersisterImpl).toHaveBeenNthCalledWith(2, {
+      logPath: join(tempDir, 'persist-test', 'iterations', '1.log'),
+    })
+
+    // complete() called after each iteration with result data
+    expect(mockPersister.complete).toHaveBeenCalledTimes(2)
+    expect(mockPersister.complete).toHaveBeenCalledWith(0, 150)
   })
 })

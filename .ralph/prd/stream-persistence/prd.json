@@ -1,0 +1,129 @@
+{
+  "prdName": "stream-persistence",
+  "tasks": [
+    {
+      "id": "types-1",
+      "category": "types",
+      "description": "Define StreamPersister interface and types",
+      "steps": [
+        "Create StreamPersisterOptions interface with logPath and optional flushIntervalMs",
+        "Create StreamPersister interface with append, appendStderr, flush, complete, abort, crash methods",
+        "Define status type: in_progress | completed | aborted | crashed",
+        "TypeScript compiles without errors"
+      ],
+      "passes": true
+    },
+    {
+      "id": "manager-1",
+      "category": "manager",
+      "description": "Implement StreamPersister class with buffering",
+      "steps": [
+        "Create StreamPersister class implementing the interface",
+        "Implement internal buffer accumulation in append()",
+        "Implement appendStderr() with [stderr] prefix",
+        "Implement flush() to write buffer to disk",
+        "Use efficient file handle management (no open/close per write)",
+        "Writes are atomic (no partial lines on crash)",
+        "Unit tests pass"
+      ],
+      "passes": true
+    },
+    {
+      "id": "manager-2",
+      "category": "manager",
+      "description": "Implement auto-flush timing strategy",
+      "steps": [
+        "Add interval timer for 100ms auto-flush",
+        "Flush on each complete event boundary",
+        "Clear timer on finalization to prevent leaks",
+        "Unit tests cover flush timing scenarios"
+      ],
+      "passes": true
+    },
+    {
+      "id": "manager-3",
+      "category": "manager",
+      "description": "Implement completion and interruption handlers",
+      "steps": [
+        "Implement complete() - writes final metadata with completed status, exitCode, duration",
+        "Implement abort() - writes metadata with aborted status and signal",
+        "Implement crash() - writes metadata with crashed status and error info",
+        "Log header starts with status: in_progress",
+        "Unit tests cover all status transitions"
+      ],
+      "passes": true
+    },
+    {
+      "id": "manager-4",
+      "category": "manager",
+      "description": "Implement error handling for disk operations",
+      "steps": [
+        "Write errors logged but don't crash agent",
+        "Disk full handled gracefully",
+        "Concurrent iteration writes don't conflict",
+        "Unit tests cover error scenarios"
+      ],
+      "passes": true
+    },
+    {
+      "id": "command-1",
+      "category": "command",
+      "description": "Integrate StreamPersister with run command",
+      "steps": [
+        "Instantiate StreamPersister in run command",
+        "Hook persistence callback alongside onOutput in claude.ts",
+        "Pass formatted events to StreamPersister.append()",
+        "Pass stderr to StreamPersister.appendStderr()",
+        "Integration test passes"
+      ],
+      "passes": true
+    },
+    {
+      "id": "command-2",
+      "category": "command",
+      "description": "Add signal handlers for graceful interruption",
+      "steps": [
+        "Register SIGINT handler - calls abort('SIGINT')",
+        "Register SIGTERM handler - calls abort('SIGTERM')",
+        "Register SIGHUP handler - calls abort('SIGHUP')",
+        "Use addListener to not replace existing handlers",
+        "Register uncaughtException handler - calls crash()",
+        "Integration test with signals passes"
+      ],
+      "passes": true
+    },
+    {
+      "id": "testing-1",
+      "category": "testing",
+      "description": "Add comprehensive tests for stream persistence",
+      "steps": [
+        "Test incremental writes match terminal display",
+        "Test ctrl+c mid-stream preserves partial content",
+        "Test log format maintains backward compatibility",
+        "Test metadata section contains correct status",
+        "All tests pass"
+      ],
+      "passes": true
+    }
+  ],
+  "context": {
+    "patterns": [
+      "NDJSONParser event handling pattern in src/agents/claude.ts:31-50",
+      "formatEvent() produces display strings in src/agents/claude-formatter.ts",
+      "Post-completion log writing pattern in src/commands/run.ts:109-126",
+      "Incremental parsing pattern in src/utils/ndjson.ts"
+    ],
+    "keyFiles": [
+      "src/agents/claude.ts",
+      "src/agents/claude-formatter.ts",
+      "src/commands/run.ts",
+      "src/utils/ndjson.ts"
+    ],
+    "nonGoals": [
+      "Log rotation/size limits",
+      "Replay/playback feature",
+      "Raw NDJSON event storage",
+      "Compression"
+    ]
+  }
+}

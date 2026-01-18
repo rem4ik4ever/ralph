@@ -4,6 +4,7 @@ import * as agents from '../../agents/index.js'
 import * as prdManager from '../../prd/index.js'
 import * as templates from '../../templates/index.js'
 import * as fs from 'node:fs/promises'
+import * as persister from '../../stream/persister.js'
 
 vi.mock('../../agents/index.js', () => ({
   getAgent: vi.fn(),
@@ -24,7 +25,10 @@ vi.mock('../../templates/index.js', () => ({
 
 vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn(),
-  writeFile: vi.fn(),
+}))
+
+vi.mock('../../stream/persister.js', () => ({
+  StreamPersisterImpl: vi.fn(),
 }))
 
 describe('commands/run', () => {
@@ -39,6 +43,16 @@ describe('commands/run', () => {
       { id: 'task-1', passes: true },
       { id: 'task-2', passes: false },
     ],
+  }
+
+  const mockPersister = {
+    append: vi.fn().mockResolvedValue(undefined),
+    appendStderr: vi.fn().mockResolvedValue(undefined),
+    flush: vi.fn().mockResolvedValue(undefined),
+    complete: vi.fn().mockResolvedValue(undefined),
+    abort: vi.fn().mockResolvedValue(undefined),
+    crash: vi.fn().mockResolvedValue(undefined),
+    getError: vi.fn().mockReturnValue(null),
   }
 
   let mockExit: ReturnType<typeof vi.spyOn>
@@ -57,7 +71,7 @@ describe('commands/run', () => {
     vi.mocked(templates.loadTemplate).mockResolvedValue('template content')
     vi.mocked(templates.substituteVars).mockReturnValue('substituted prompt')
     vi.mocked(fs.mkdir).mockResolvedValue(undefined)
-    vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+    vi.mocked(persister.StreamPersisterImpl).mockImplementation(() => mockPersister as any)
     mockAgent.execute.mockResolvedValue({
       output: 'done',
       exitCode: 0,
@@ -144,18 +158,21 @@ describe('commands/run', () => {
     expect(mockAgent.execute).toHaveBeenCalledTimes(3)
   })
 
-  it('writes log after each iteration', async () => {
+  it('creates persister and calls complete for each iteration', async () => {
     await run('test-prd', { agent: 'claude', iterations: '2' })
 
-    expect(fs.writeFile).toHaveBeenCalledTimes(2)
-    expect(fs.writeFile).toHaveBeenCalledWith(
-      '/home/.ralph/prd/test-prd/iterations/0.log',
-      expect.stringContaining('# Iteration 0')
-    )
-    expect(fs.writeFile).toHaveBeenCalledWith(
-      '/home/.ralph/prd/test-prd/iterations/1.log',
-      expect.stringContaining('# Iteration 1')
-    )
+    // Persister created for each iteration
+    expect(persister.StreamPersisterImpl).toHaveBeenCalledTimes(2)
+    expect(persister.StreamPersisterImpl).toHaveBeenCalledWith({
+      logPath: '/home/.ralph/prd/test-prd/iterations/0.log',
+    })
+    expect(persister.StreamPersisterImpl).toHaveBeenCalledWith({
+      logPath: '/home/.ralph/prd/test-prd/iterations/1.log',
+    })
+
+    // Complete called for each iteration
+    expect(mockPersister.complete).toHaveBeenCalledTimes(2)
+    expect(mockPersister.complete).toHaveBeenCalledWith(0, 100)
   })
 
   it('passes substituted prompt to agent', async () => {
@@ -186,7 +203,7 @@ describe('commands/run', () => {
     await run('test-prd', { agent: 'claude', iterations: '1' })
 
     // Should still complete, just log the error
-    expect(fs.writeFile).toHaveBeenCalled()
+    expect(mockPersister.complete).toHaveBeenCalledWith(1, 100)
   })
 
   it('stops early when tasks complete marker found', async () => {
@@ -234,5 +251,125 @@ describe('commands/run', () => {
     expect(mockConsoleLog).toHaveBeenCalledWith(
       expect.stringContaining('Pending tasks: 1/2')
     )
+  })
+
+  describe('signal handling', () => {
+    it('registers signal handlers during run', async () => {
+      const addListenerSpy = vi.spyOn(process, 'addListener')
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(addListenerSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function))
+      expect(addListenerSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function))
+      expect(addListenerSpy).toHaveBeenCalledWith('SIGHUP', expect.any(Function))
+      expect(addListenerSpy).toHaveBeenCalledWith('uncaughtException', expect.any(Function))
+
+      addListenerSpy.mockRestore()
+    })
+
+    it('unregisters signal handlers after run completes', async () => {
+      const removeListenerSpy = vi.spyOn(process, 'removeListener')
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(removeListenerSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function))
+      expect(removeListenerSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function))
+      expect(removeListenerSpy).toHaveBeenCalledWith('SIGHUP', expect.any(Function))
+      expect(removeListenerSpy).toHaveBeenCalledWith('uncaughtException', expect.any(Function))
+
+      removeListenerSpy.mockRestore()
+    })
+
+    it('calls abort on persister when SIGINT received during execute', async () => {
+      // Use non-throwing exit mock for signal tests
+      mockExit.mockRestore()
+      const exitCodes: number[] = []
+      mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+        exitCodes.push(code as number)
+        return undefined as never
+      })
+
+      const handlers: Record<string, () => void> = {}
+      const addListenerSpy = vi.spyOn(process, 'addListener').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as () => void
+        return process
+      })
+      const removeListenerSpy = vi.spyOn(process, 'removeListener').mockReturnValue(process)
+
+      mockAgent.execute.mockImplementation(async () => {
+        handlers['SIGINT']()
+        await new Promise((r) => setImmediate(r))
+        return { output: '', exitCode: 0, duration: 100 }
+      })
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(mockPersister.abort).toHaveBeenCalledWith('SIGINT')
+      expect(exitCodes).toContain(130) // 128 + 2
+
+      addListenerSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+    })
+
+    it('calls abort on persister when SIGTERM received', async () => {
+      mockExit.mockRestore()
+      const exitCodes: number[] = []
+      mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+        exitCodes.push(code as number)
+        return undefined as never
+      })
+
+      const handlers: Record<string, () => void> = {}
+      const addListenerSpy = vi.spyOn(process, 'addListener').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as () => void
+        return process
+      })
+      const removeListenerSpy = vi.spyOn(process, 'removeListener').mockReturnValue(process)
+
+      mockAgent.execute.mockImplementation(async () => {
+        handlers['SIGTERM']()
+        await new Promise((r) => setImmediate(r))
+        return { output: '', exitCode: 0, duration: 100 }
+      })
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(mockPersister.abort).toHaveBeenCalledWith('SIGTERM')
+      expect(exitCodes).toContain(143) // 128 + 15
+
+      addListenerSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+    })
+
+    it('calls crash on persister when uncaughtException received', async () => {
+      mockExit.mockRestore()
+      const exitCodes: number[] = []
+      mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+        exitCodes.push(code as number)
+        return undefined as never
+      })
+
+      const handlers: Record<string, (err: Error) => void> = {}
+      const addListenerSpy = vi.spyOn(process, 'addListener').mockImplementation((event, handler) => {
+        handlers[event as string] = handler as (err: Error) => void
+        return process
+      })
+      const removeListenerSpy = vi.spyOn(process, 'removeListener').mockReturnValue(process)
+
+      const testError = new Error('test crash')
+      mockAgent.execute.mockImplementation(async () => {
+        handlers['uncaughtException'](testError)
+        await new Promise((r) => setImmediate(r))
+        return { output: '', exitCode: 0, duration: 100 }
+      })
+
+      await run('test-prd', { agent: 'claude', iterations: '1' })
+
+      expect(mockPersister.crash).toHaveBeenCalledWith(testError)
+      expect(exitCodes).toContain(1)
+
+      addListenerSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+    })
   })
 })
