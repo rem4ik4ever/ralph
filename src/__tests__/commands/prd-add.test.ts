@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { prdAdd } from '../../commands/prd-add.js'
+import { prdAdd, promptOverride } from '../../commands/prd-add.js'
 import * as agents from '../../agents/index.js'
 import * as prdManager from '../../prd/manager.js'
 import * as templates from '../../templates/templates.js'
 import { access, writeFile, readFile } from 'node:fs/promises'
+import * as inquirerPrompts from '@inquirer/prompts'
 
 vi.mock('node:fs/promises', () => ({
   access: vi.fn(),
   writeFile: vi.fn(),
   readFile: vi.fn(),
+}))
+
+vi.mock('@inquirer/prompts', () => ({
+  confirm: vi.fn(),
 }))
 
 vi.mock('../../agents/index.js', () => ({
@@ -17,7 +22,7 @@ vi.mock('../../agents/index.js', () => ({
 }))
 
 vi.mock('../../prd/manager.js', () => ({
-  prdExists: vi.fn(),
+  getPrdFileStatus: vi.fn(),
   createPrdFolder: vi.fn(),
   copyMarkdown: vi.fn(),
   getPrdDir: vi.fn(),
@@ -47,7 +52,7 @@ describe('commands/prd-add', () => {
     vi.mocked(agents.isValidAgent).mockReturnValue(true)
     vi.mocked(agents.getAgent).mockReturnValue(mockAgent)
     vi.mocked(access).mockResolvedValue(undefined)
-    vi.mocked(prdManager.prdExists).mockResolvedValue(false)
+    vi.mocked(prdManager.getPrdFileStatus).mockResolvedValue('none')
     vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(false)
     vi.mocked(prdManager.getPrdDir).mockResolvedValue('/home/test/.ralph/prd/test-prd')
     vi.mocked(prdManager.createPrdFolder).mockResolvedValue(undefined)
@@ -96,38 +101,65 @@ describe('commands/prd-add', () => {
     expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('File not found'))
   })
 
-  it('checks if PRD already exists in global when not initialized', async () => {
-    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(false)
-    vi.mocked(prdManager.prdExists).mockResolvedValue(true)
+  describe('smart existence handling', () => {
+    it('proceeds normally when fileStatus is none (no existing files)', async () => {
+      vi.mocked(prdManager.getPrdFileStatus).mockResolvedValue('none')
 
-    await expect(prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' }))
-      .rejects.toThrow('process.exit called')
+      await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
 
-    expect(prdManager.prdExists).toHaveBeenCalledWith('test-prd', 'global')
-    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('already exists (global)'))
-  })
+      expect(prdManager.createPrdFolder).toHaveBeenCalledWith('test-prd')
+      expect(prdManager.copyMarkdown).toHaveBeenCalledWith('/path/to/prd.md', 'test-prd')
+      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Copied'))
+    })
 
-  it('checks if PRD already exists in local when initialized', async () => {
-    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(true)
-    vi.mocked(prdManager.prdExists).mockResolvedValue(true)
-    vi.mocked(prdManager.getPrdDir).mockResolvedValue('/project/.ralph/prd/test-prd')
+    it('skips copy when fileStatus is partial (only prd.md exists)', async () => {
+      vi.mocked(prdManager.getPrdFileStatus).mockResolvedValue('partial')
 
-    await expect(prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' }))
-      .rejects.toThrow('process.exit called')
+      await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
 
-    expect(prdManager.prdExists).toHaveBeenCalledWith('test-prd', 'local')
-    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('already exists (local)'))
-  })
+      expect(prdManager.createPrdFolder).toHaveBeenCalledWith('test-prd')
+      expect(prdManager.copyMarkdown).not.toHaveBeenCalled()
+      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Using existing prd.md'))
+    })
 
-  it('creates local PRD when project initialized even if global exists', async () => {
-    vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(true)
-    vi.mocked(prdManager.prdExists).mockResolvedValue(false) // local doesn't exist
-    vi.mocked(prdManager.getPrdDir).mockResolvedValue('/project/.ralph/prd/test-prd')
+    it('prompts for override when fileStatus is complete (fully registered)', async () => {
+      vi.mocked(prdManager.getPrdFileStatus).mockResolvedValue('complete')
+      vi.mocked(inquirerPrompts.confirm).mockResolvedValue(true)
 
-    await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
+      await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
 
-    expect(prdManager.prdExists).toHaveBeenCalledWith('test-prd', 'local')
-    expect(prdManager.createPrdFolder).toHaveBeenCalledWith('test-prd')
+      expect(inquirerPrompts.confirm).toHaveBeenCalled()
+      expect(prdManager.createPrdFolder).toHaveBeenCalledWith('test-prd')
+    })
+
+    it('cancels when user declines override', async () => {
+      vi.mocked(prdManager.getPrdFileStatus).mockResolvedValue('complete')
+      vi.mocked(inquirerPrompts.confirm).mockResolvedValue(false)
+
+      await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
+
+      expect(inquirerPrompts.confirm).toHaveBeenCalled()
+      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('cancelled'))
+      expect(prdManager.createPrdFolder).not.toHaveBeenCalled()
+    })
+
+    it('checks local fileStatus when project is initialized', async () => {
+      vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(true)
+      vi.mocked(prdManager.getPrdFileStatus).mockResolvedValue('none')
+
+      await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
+
+      expect(prdManager.getPrdFileStatus).toHaveBeenCalledWith('test-prd', 'local')
+    })
+
+    it('checks global fileStatus when project is not initialized', async () => {
+      vi.mocked(prdManager.isProjectInitialized).mockResolvedValue(false)
+      vi.mocked(prdManager.getPrdFileStatus).mockResolvedValue('none')
+
+      await prdAdd('/path/to/prd.md', 'test-prd', { agent: 'claude' })
+
+      expect(prdManager.getPrdFileStatus).toHaveBeenCalledWith('test-prd', 'global')
+    })
   })
 
   it('creates PRD folder', async () => {
@@ -210,5 +242,35 @@ describe('commands/prd-add', () => {
       .rejects.toThrow('process.exit called')
 
     expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('Agent failed'))
+  })
+
+  describe('promptOverride', () => {
+    it('returns true when user confirms', async () => {
+      vi.mocked(inquirerPrompts.confirm).mockResolvedValue(true)
+
+      const result = await promptOverride('test-prd', 'local')
+
+      expect(result).toBe(true)
+      expect(inquirerPrompts.confirm).toHaveBeenCalledWith({
+        message: "PRD 'test-prd' already exists (local). Override?",
+        default: false,
+      })
+    })
+
+    it('returns false when user declines', async () => {
+      vi.mocked(inquirerPrompts.confirm).mockResolvedValue(false)
+
+      const result = await promptOverride('test-prd', 'global')
+
+      expect(result).toBe(false)
+    })
+
+    it('returns false on Ctrl+C', async () => {
+      vi.mocked(inquirerPrompts.confirm).mockRejectedValue(new Error('User cancelled'))
+
+      const result = await promptOverride('test-prd', 'local')
+
+      expect(result).toBe(false)
+    })
   })
 })

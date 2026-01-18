@@ -8,6 +8,7 @@ import {
   getLocalPrdsDir,
   getGlobalPrdsDir,
   prdExists,
+  getPrdFileStatus,
   createPrdFolder,
   copyMarkdown,
   getPrd,
@@ -137,6 +138,57 @@ describe('prd/manager', () => {
     it('checks only global when location=global', async () => {
       vi.mocked(access).mockResolvedValueOnce(undefined)
       expect(await prdExists('test-prd', 'global')).toBe(true)
+      expect(access).toHaveBeenCalledWith('/home/test/.ralph/prd/test-prd')
+    })
+  })
+
+  describe('getPrdFileStatus', () => {
+    it('returns none when directory does not exist', async () => {
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'))
+      expect(await getPrdFileStatus('test-prd', 'local')).toBe('none')
+    })
+
+    it('returns none when directory exists but no prd.md', async () => {
+      vi.mocked(access)
+        .mockResolvedValueOnce(undefined) // dir exists
+        .mockRejectedValueOnce(new Error('ENOENT')) // no prd.md
+        .mockRejectedValueOnce(new Error('ENOENT')) // no prd.json
+        .mockRejectedValueOnce(new Error('ENOENT')) // no progress.txt
+      expect(await getPrdFileStatus('test-prd', 'local')).toBe('none')
+    })
+
+    it('returns partial when only prd.md exists', async () => {
+      vi.mocked(access)
+        .mockResolvedValueOnce(undefined) // dir exists
+        .mockResolvedValueOnce(undefined) // prd.md exists
+        .mockRejectedValueOnce(new Error('ENOENT')) // no prd.json
+        .mockRejectedValueOnce(new Error('ENOENT')) // no progress.txt
+      expect(await getPrdFileStatus('test-prd', 'local')).toBe('partial')
+    })
+
+    it('returns complete when all three files exist', async () => {
+      vi.mocked(access).mockResolvedValue(undefined) // all checks pass
+      expect(await getPrdFileStatus('test-prd', 'local')).toBe('complete')
+    })
+
+    it('returns partial when prd.md + prd.json exist but no progress.txt', async () => {
+      vi.mocked(access)
+        .mockResolvedValueOnce(undefined) // dir exists
+        .mockResolvedValueOnce(undefined) // prd.md exists
+        .mockResolvedValueOnce(undefined) // prd.json exists
+        .mockRejectedValueOnce(new Error('ENOENT')) // no progress.txt
+      expect(await getPrdFileStatus('test-prd', 'local')).toBe('partial')
+    })
+
+    it('checks local path when location=local', async () => {
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'))
+      await getPrdFileStatus('test-prd', 'local')
+      expect(access).toHaveBeenCalledWith('/project/.ralph/prd/test-prd')
+    })
+
+    it('checks global path when location=global', async () => {
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'))
+      await getPrdFileStatus('test-prd', 'global')
       expect(access).toHaveBeenCalledWith('/home/test/.ralph/prd/test-prd')
     })
   })

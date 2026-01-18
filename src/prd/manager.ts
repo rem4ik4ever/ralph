@@ -38,6 +38,48 @@ async function dirExists(path: string): Promise<boolean> {
   }
 }
 
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export type PrdFileStatus = 'none' | 'partial' | 'complete'
+
+/**
+ * Check what PRD files exist in the target directory.
+ * - 'none': directory doesn't exist or is empty
+ * - 'partial': only prd.md exists (skill-created scenario)
+ * - 'complete': prd.md + prd.json + progress.txt all exist (fully registered)
+ */
+export async function getPrdFileStatus(
+  name: string,
+  location: 'local' | 'global',
+): Promise<PrdFileStatus> {
+  const dir = location === 'local' ? getLocalPrdDir(name) : getGlobalPrdDir(name)
+
+  if (!(await dirExists(dir))) {
+    return 'none'
+  }
+
+  const hasMd = await fileExists(join(dir, 'prd.md'))
+  const hasJson = await fileExists(join(dir, 'prd.json'))
+  const hasProgress = await fileExists(join(dir, 'progress.txt'))
+
+  if (hasMd && hasJson && hasProgress) {
+    return 'complete'
+  }
+
+  if (hasMd) {
+    return 'partial'
+  }
+
+  return 'none'
+}
+
 export async function isProjectInitialized(): Promise<boolean> {
   const localRalphDir = join(process.cwd(), '.ralph')
   return dirExists(localRalphDir)
