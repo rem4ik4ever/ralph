@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import { confirm } from '@inquirer/prompts'
 import { rm } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { getPrdInfo } from '../prd/index.js'
 
 export interface PrdDeleteOptions {
@@ -51,7 +52,7 @@ export async function prdDelete(name: string, opts: PrdDeleteOptions): Promise<v
   }
 
   // Get the PRD directory (parent of prd.md)
-  const prdDir = info.files.prdMd.path.replace(/\/prd\.md$/, '')
+  const prdDir = dirname(info.files.prdMd.path)
 
   // Delete the entire PRD directory
   await rm(prdDir, { recursive: true, force: true })

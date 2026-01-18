@@ -55,10 +55,17 @@ Show PRD details and file locations.
 ralph prd info my-feature
 ```
 
-Output:
-- PRD name and status
-- Task completion count
-- File paths (prd.md, prd.json, progress.txt, iterations/)
+Example output:
+```
+PRD: my-feature
+Status: in_progress (3/7 tasks complete)
+
+Files:
+  prd.md:      .ralph/prd/my-feature/prd.md
+  prd.json:    .ralph/prd/my-feature/prd.json
+  progress:    .ralph/prd/my-feature/progress.txt
+  iterations:  .ralph/prd/my-feature/iterations/ (2 files)
+```
 
 ### `ralph prd delete <name>`
 
@@ -125,6 +132,8 @@ Options:
   }
 }
 ```
+
+Note: `context` is optional and generated from the PRD's Technical Context section.
 
 ### progress.txt Format
 

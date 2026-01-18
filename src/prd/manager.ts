@@ -303,15 +303,24 @@ export async function getPrdInfo(name: string): Promise<PrdInfo> {
     try {
       const content = await readFile(prdJsonPath, 'utf-8')
       const prd = JSON.parse(content) as PrdJson
-      tasksTotal = prd.tasks.length
-      tasksCompleted = prd.tasks.filter((t) => t.passes).length
 
-      if (tasksCompleted === 0) {
-        status = 'pending'
-      } else if (tasksCompleted === tasksTotal) {
-        status = 'completed'
+      // Validate tasks array exists
+      if (!prd.tasks || !Array.isArray(prd.tasks)) {
+        status = 'partial'
       } else {
-        status = 'in_progress'
+        tasksTotal = prd.tasks.length
+        tasksCompleted = prd.tasks.filter((t) => t.passes).length
+
+        if (tasksTotal === 0) {
+          // Empty tasks array = pending, not completed
+          status = 'pending'
+        } else if (tasksCompleted === 0) {
+          status = 'pending'
+        } else if (tasksCompleted === tasksTotal) {
+          status = 'completed'
+        } else {
+          status = 'in_progress'
+        }
       }
     } catch {
       status = 'partial'

@@ -136,4 +136,30 @@ describe('commands/prd-delete', () => {
     expect(rm).not.toHaveBeenCalled()
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('cancelled'))
   })
+
+  it('throws when rm fails with permission error', async () => {
+    vi.mocked(prdManager.getPrdInfo).mockResolvedValue(createMockInfo())
+    vi.mocked(rm).mockRejectedValue(new Error('EACCES: permission denied'))
+
+    await expect(prdDelete('test-prd', { force: true })).rejects.toThrow('EACCES')
+  })
+
+  it('handles PRD with no existing files', async () => {
+    vi.mocked(prdManager.getPrdInfo).mockResolvedValue(
+      createMockInfo({
+        files: {
+          prdMd: { path: '/project/.ralph/prd/empty/prd.md', exists: false },
+          prdJson: { path: '/project/.ralph/prd/empty/prd.json', exists: false },
+          progress: { path: '/project/.ralph/prd/empty/progress.txt', exists: false },
+          iterations: { path: '/project/.ralph/prd/empty/iterations', exists: false, fileCount: 0 },
+        },
+      })
+    )
+    vi.mocked(rm).mockResolvedValue(undefined)
+
+    await prdDelete('empty', { force: true })
+
+    // Should still attempt to delete the directory
+    expect(rm).toHaveBeenCalledWith('/project/.ralph/prd/empty', { recursive: true, force: true })
+  })
 })

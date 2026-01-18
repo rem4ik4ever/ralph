@@ -536,5 +536,53 @@ describe('prd/manager', () => {
       expect(result.files.iterations.exists).toBe(true)
       expect(result.files.iterations.fileCount).toBe(2)
     })
+
+    it('returns pending status for empty tasks array', async () => {
+      const prd: PrdJson = {
+        prdName: 'empty-tasks',
+        tasks: [],
+      }
+
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('empty-tasks')
+
+      // Empty tasks should be 'pending', not 'completed'
+      expect(result.status).toBe('pending')
+      expect(result.tasksTotal).toBe(0)
+      expect(result.tasksCompleted).toBe(0)
+    })
+
+    it('returns partial status when prd.json is invalid JSON', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue('{ invalid json }')
+
+      const result = await getPrdInfo('corrupt')
+
+      expect(result.status).toBe('partial')
+    })
+
+    it('returns partial status when tasks property is missing', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify({ prdName: 'no-tasks' }))
+
+      const result = await getPrdInfo('no-tasks')
+
+      expect(result.status).toBe('partial')
+    })
+
+    it('returns partial status when tasks is not an array', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify({ prdName: 'bad', tasks: 'not-array' }))
+
+      const result = await getPrdInfo('bad')
+
+      expect(result.status).toBe('partial')
+    })
   })
 })
