@@ -44,7 +44,7 @@
         "Add --help text",
         "Tests pass"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "templates-1",

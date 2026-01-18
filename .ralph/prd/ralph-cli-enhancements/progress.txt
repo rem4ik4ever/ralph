@@ -20,3 +20,11 @@
 - Exits 1 with error message when PRD not found
 - Wired command in src/index.ts as `prd info <name>`
 - **Files:** src/commands/prd-info.ts, src/index.ts
+
+## Task - command-2
+- Created `src/commands/prd-delete.ts` with `prdDelete(name, opts)` function
+- Lists files before deletion and prompts for confirmation
+- `--force` / `-f` flag skips confirmation
+- Uses `rm` with `recursive: true` to remove entire PRD directory
+- Uses `@inquirer/prompts` confirm (same as prd-add)
+- **Files:** src/commands/prd-delete.ts, src/index.ts
