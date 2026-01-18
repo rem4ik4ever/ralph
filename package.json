@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "prepublishOnly": "bun run build",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "docker-test": "./scripts/docker-test.sh"
   },
   "keywords": [
     "cli",
