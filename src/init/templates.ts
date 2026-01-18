@@ -25,6 +25,14 @@ export function getTargetSkillPath(): string {
   return join(getTargetSkillDir(), 'SKILL.md')
 }
 
+export function getTargetRalphSkillDir(): string {
+  return join(getClaudeDir(), 'skills', 'ralph')
+}
+
+export function getTargetRalphSkillPath(): string {
+  return join(getTargetRalphSkillDir(), 'SKILL.md')
+}
+
 export function getTargetCommandPath(): string {
   return join(getClaudeDir(), 'commands', 'ralph-complete-next-task.md')
 }
@@ -35,6 +43,10 @@ export function getBundledSkillPath(): string {
 
 export function getBundledCommandPath(): string {
   return join(__dirname, '../../templates/ralph-complete-next-task-command.md')
+}
+
+export function getBundledRalphSkillPath(): string {
+  return join(__dirname, '../../templates/ralph-skill.md')
 }
 
 export async function loadBundledSkill(): Promise<string> {
@@ -48,6 +60,15 @@ export async function loadBundledSkill(): Promise<string> {
 
 export async function loadBundledCommand(): Promise<string> {
   const path = getBundledCommandPath()
+  try {
+    return await readFile(path, 'utf-8')
+  } catch {
+    throw new BundledTemplateNotFoundError(path)
+  }
+}
+
+export async function loadBundledRalphSkill(): Promise<string> {
+  const path = getBundledRalphSkillPath()
   try {
     return await readFile(path, 'utf-8')
   } catch {

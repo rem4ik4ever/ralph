@@ -36,3 +36,11 @@
 - Documented file structure (.ralph/, prd.json, progress.txt)
 - Included common workflows: start feature, check progress, cleanup
 - **Files:** templates/ralph-skill.md
+
+## Task - cli-1
+- CLI commands wired in earlier tasks (command-1, command-2)
+- Added helper functions to src/init/templates.ts for ralph skill
+- Updated installClaudeSkills() in init.ts to install ralph skill
+- Installs to ~/.claude/skills/ralph/SKILL.md
+- **Files:** src/init/templates.ts, src/commands/init.ts
+- **Learnings:** Template loading uses same pattern for all skills

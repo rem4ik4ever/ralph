@@ -69,7 +69,7 @@
         "Update src/init/skills.ts to install ralph-skill to ~/.claude/skills/ralph-skill/SKILL.md",
         "Tests pass"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "testing-1",
