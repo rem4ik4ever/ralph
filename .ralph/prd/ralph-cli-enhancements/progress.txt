@@ -12,3 +12,11 @@
 - Handles local-first precedence for PRD lookup
 - **Files:** src/prd/types.ts, src/prd/manager.ts
 - **Learnings:** `readdir` can count files in iterations dir
+
+## Task - command-1
+- Created `src/commands/prd-info.ts` with `prdInfo(name)` function
+- Formatted output: PRD name, status, task progress, file paths
+- Shows "not registered" hint for partial PRDs
+- Exits 1 with error message when PRD not found
+- Wired command in src/index.ts as `prd info <name>`
+- **Files:** src/commands/prd-info.ts, src/index.ts

@@ -3,6 +3,7 @@ import { program } from 'commander'
 import { run } from './commands/run.js'
 import { prdAdd } from './commands/prd-add.js'
 import { prdList } from './commands/prd-list.js'
+import { prdInfo } from './commands/prd-info.js'
 import { init } from './commands/init.js'
 
 program
@@ -34,5 +35,11 @@ prd
   .action(prdAdd)
 
 prd.command('list').description('List all PRDs').action(prdList)
+
+prd
+  .command('info')
+  .description('Show PRD info and file locations')
+  .argument('<name>', 'Name of PRD')
+  .action(prdInfo)
 
 program.parse()
