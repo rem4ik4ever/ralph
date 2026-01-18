@@ -1,3 +1,18 @@
+## [1.3.0](https://github.com/rem4ik4ever/ralph/compare/v1.2.1...v1.3.0) (2026-01-18)
+
+### Features
+
+* **stream:** add auto-flush timer and event boundary flush ([0a7a125](https://github.com/rem4ik4ever/ralph/commit/0a7a1250efd94ab438d8e921d5d8a51951562b1d))
+* **stream:** add signal handlers for graceful interruption ([ca78be7](https://github.com/rem4ik4ever/ralph/commit/ca78be7b3ea99d9a8359d73f5abe0d108313aaef))
+* **stream:** add StreamPersister types and interfaces ([d74a102](https://github.com/rem4ik4ever/ralph/commit/d74a1029e47b3883dffbb9ea593d76e56f496b0a))
+* **stream:** implement StreamPersister with buffering ([9f4e9b6](https://github.com/rem4ik4ever/ralph/commit/9f4e9b6266c8e593560bdc7491e9ed224eda13d8))
+* **stream:** integrate StreamPersister with run command ([438ae08](https://github.com/rem4ik4ever/ralph/commit/438ae08ba9b2bd5fbb53d445da2bce58912dee5c))
+* **stream:** mark manager-3 complete - handlers already implemented ([4056dfd](https://github.com/rem4ik4ever/ralph/commit/4056dfd412fff3202ecf4a83ea76d1b02888dfe8))
+
+### Bug Fixes
+
+* **stream:** address code review findings ([2ead558](https://github.com/rem4ik4ever/ralph/commit/2ead55899d428b8d2e57ca8cae7ddb3eb0dac5f0))
+
 ## [1.2.1](https://github.com/rem4ik4ever/ralph/compare/v1.2.0...v1.2.1) (2026-01-17)
 
 ### Bug Fixes
