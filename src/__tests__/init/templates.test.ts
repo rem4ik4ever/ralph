@@ -101,7 +101,7 @@ describe('init/templates', () => {
       const content = await realReadFile(skillPath, 'utf-8')
 
       expect(content).toContain('Ask About Execution')
-      expect(content).toContain('/ralph-complete-next-task')
+      expect(content).toContain('ralph run <feature-name>')
     })
   })
 })
