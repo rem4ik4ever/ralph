@@ -303,6 +303,174 @@ describe('stream/persister', () => {
     })
   })
 
+  describe('incremental persistence', () => {
+    it('writes match terminal display order', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      // Simulate terminal output sequence
+      const terminalOutput: string[] = []
+      const chunks = ['Start\n', 'Processing...\n', 'Step 1 done\n', 'Step 2 done\n', 'Complete\n']
+
+      for (const chunk of chunks) {
+        terminalOutput.push(chunk)
+        await persister.append(chunk, true) // Each event boundary
+      }
+
+      await persister.complete(0, 100)
+
+      const content = await fs.readFile(logPath, 'utf8')
+
+      // Verify order matches terminal
+      let lastIndex = 0
+      for (const chunk of terminalOutput) {
+        const index = content.indexOf(chunk, lastIndex)
+        expect(index).toBeGreaterThan(lastIndex - 1) // Allow for first chunk
+        lastIndex = index + chunk.length
+      }
+    })
+
+    it('preserves partial content on abort (ctrl+c simulation)', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      // Simulate partial stream then interrupt
+      await persister.append('Line 1\n', true)
+      await persister.append('Line 2\n', true)
+      await persister.append('Line 3 (partial) ...')
+      // Interrupt before flush
+      await persister.abort('SIGINT')
+
+      const content = await fs.readFile(logPath, 'utf8')
+
+      // All content including partial should be preserved
+      expect(content).toContain('Line 1')
+      expect(content).toContain('Line 2')
+      expect(content).toContain('Line 3 (partial)')
+      expect(content).toContain('Status: aborted')
+      expect(content).toContain('Interrupted: SIGINT')
+    })
+
+    it('preserves buffered content on crash', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      // Simulate content in buffer during crash
+      await persister.append('Output before crash\n')
+      await persister.append('Last line')
+      await persister.crash(new Error('Unexpected error'))
+
+      const content = await fs.readFile(logPath, 'utf8')
+
+      expect(content).toContain('Output before crash')
+      expect(content).toContain('Last line')
+      expect(content).toContain('Status: crashed')
+    })
+  })
+
+  describe('log format compatibility', () => {
+    it('maintains header structure with in_progress before finalization', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      await persister.append('content\n')
+      await persister.flush() // Flush before complete to write header with in_progress
+
+      const content = await fs.readFile(logPath, 'utf8')
+      const lines = content.split('\n')
+
+      // Verify header structure: title, timestamp, status, separator, content
+      expect(lines[0]).toBe('# Iteration Log')
+      expect(lines[1]).toMatch(/^Timestamp: \d{4}-\d{2}-\d{2}T/)
+      expect(lines[2]).toBe('Status: in_progress')
+      expect(lines[3]).toBe('---')
+      expect(lines[4]).toBe('content') // Content starts after separator
+
+      await persister.destroy()
+    })
+
+    it('maintains metadata separator structure', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      await persister.append('body content')
+      await persister.complete(0, 1234)
+
+      const content = await fs.readFile(logPath, 'utf8')
+
+      // Find metadata section
+      const metaStart = content.lastIndexOf('\n---\n')
+      expect(metaStart).toBeGreaterThan(0)
+
+      const metaSection = content.slice(metaStart)
+      expect(metaSection).toContain('Status: completed')
+      expect(metaSection).toContain('Exit Code: 0')
+      expect(metaSection).toContain('Duration: 1234ms')
+    })
+
+    it('abort includes interrupted signal', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      await persister.abort('SIGHUP')
+
+      const content = await fs.readFile(logPath, 'utf8')
+      const metaSection = content.slice(content.lastIndexOf('\n---\n'))
+
+      expect(metaSection).toContain('Status: aborted')
+      expect(metaSection).toContain('Interrupted: SIGHUP')
+      expect(metaSection).not.toContain('Duration:')
+    })
+
+    it('crash includes error message', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      await persister.crash(new Error('Connection reset'))
+
+      const content = await fs.readFile(logPath, 'utf8')
+      const metaSection = content.slice(content.lastIndexOf('\n---\n'))
+
+      expect(metaSection).toContain('Status: crashed')
+      expect(metaSection).toContain('Error: Connection reset')
+    })
+  })
+
+  describe('metadata correctness', () => {
+    it('in_progress status in header before finalization', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+
+      await persister.append('content')
+      await persister.flush()
+
+      const content = await fs.readFile(logPath, 'utf8')
+
+      // Should only have header status, no final metadata yet
+      expect(content).toContain('Status: in_progress')
+      expect(content).not.toContain('Status: completed')
+      expect(content).not.toContain('Status: aborted')
+
+      await persister.destroy()
+    })
+
+    it('completed status with exit code 0', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+      await persister.complete(0, 100)
+
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toMatch(/Status: completed[\s\S]*Exit Code: 0/)
+    })
+
+    it('completed status with non-zero exit code', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+      await persister.complete(1, 100)
+
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toMatch(/Status: completed[\s\S]*Exit Code: 1/)
+    })
+
+    it('duration is in milliseconds', async () => {
+      const persister = new StreamPersisterImpl({ logPath })
+      await persister.complete(0, 12345)
+
+      const content = await fs.readFile(logPath, 'utf8')
+      expect(content).toContain('Duration: 12345ms')
+    })
+  })
+
   describe('auto-flush timing', () => {
     it('auto-flushes after interval (real time)', async () => {
       // Use short interval for fast test

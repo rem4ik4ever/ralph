@@ -63,3 +63,12 @@
 - Files changed: `src/commands/run.ts` (SignalHandlers class + integration)
 - Tests: `src/__tests__/commands/run.test.ts` (5 new signal handling tests)
 - **Learnings:** Testing signal handlers requires non-throwing process.exit mock to avoid unhandled rejections in vitest
+
+## Task - testing-1
+- Added 11 new comprehensive tests for stream persistence
+- `incremental persistence` suite: terminal display order, ctrl+c preserves partial content, crash preserves buffer
+- `log format compatibility` suite: header structure, metadata separator, abort includes signal, crash includes error
+- `metadata correctness` suite: in_progress before finalization, completed with exit codes, duration in ms
+- Files changed: `src/__tests__/stream/persister.test.ts` (11 new tests)
+- Total tests now: 38 in persister.test.ts, 188 across project
+- **Learnings:** Header writes at first flush with current status; test structure must account for when header is written

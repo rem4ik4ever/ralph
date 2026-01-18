@@ -103,7 +103,7 @@
         "Test metadata section contains correct status",
         "All tests pass"
       ],
-      "passes": false
+      "passes": true
     }
   ],
   "context": {
