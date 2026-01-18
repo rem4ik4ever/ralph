@@ -25,3 +25,13 @@
 - Timer cleared in `complete()`, `abort()`, `crash()`, `destroy()` to prevent leaks
 - Files changed: `src/stream/persister.ts`, `src/stream/types.ts`, `src/__tests__/stream/persister.test.ts`
 - **Learnings:** Fake timers + real async fs ops don't mix well in vitest; use real short intervals for timing tests
+
+## Task - manager-3
+- Already implemented in previous commits
+- `complete(exitCode, duration)` writes metadata separator, status, exit code, duration
+- `abort(signal)` writes status + "Interrupted: {signal}"
+- `crash(error)` writes status + "Error: {message}"
+- Header written lazily on first flush with `Status: in_progress`
+- Files: `src/stream/persister.ts:131-183` - finalization methods and `writeMetadata()`
+- Tests: `src/__tests__/stream/persister.test.ts:130-193` - complete/abort/crash tests
+- **Learnings:** Task was already done during manager-1/manager-2 implementation
