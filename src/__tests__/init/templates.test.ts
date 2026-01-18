@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { readFile } from 'node:fs/promises'
+import { readFile, readFile as fsReadFile } from 'node:fs/promises'
 import {
   getClaudeDir,
   getTargetSkillDir,
@@ -82,6 +82,26 @@ describe('init/templates', () => {
       vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT'))
 
       await expect(loadBundledCommand()).rejects.toThrow(BundledTemplateNotFoundError)
+    })
+  })
+
+  describe('bundled skill content', () => {
+    it('contains post-creation registration instruction', async () => {
+      const { readFile: realReadFile } = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+      const skillPath = getBundledSkillPath()
+      const content = await realReadFile(skillPath, 'utf-8')
+
+      expect(content).toContain('ralph prd add')
+      expect(content).toContain('Register the PRD')
+    })
+
+    it('contains post-creation execution prompt', async () => {
+      const { readFile: realReadFile } = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+      const skillPath = getBundledSkillPath()
+      const content = await realReadFile(skillPath, 'utf-8')
+
+      expect(content).toContain('Ask About Execution')
+      expect(content).toContain('/ralph-complete-next-task')
     })
   })
 })

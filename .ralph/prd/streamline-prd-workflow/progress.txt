@@ -17,3 +17,15 @@
   - `src/__tests__/prd/manager.test.ts` - added getPrdFileStatus tests
   - `src/__tests__/integration/prd-workflow.test.ts` - added mock for getPrdFileStatus
 - **Learnings:** Integration tests need all mocked functions declared even if unused in specific test
+
+## Task - init-1
+- Updated skill template `templates/ralph-prd-skill.md` to include post-creation steps:
+  - "Register the PRD" section with `ralph prd add` command
+  - "Ask About Execution" section prompting user about starting tasks
+- Added tests in `src/__tests__/init/templates.test.ts`:
+  - Validates bundled skill contains registration instruction
+  - Validates bundled skill contains execution prompt
+- Files changed:
+  - `templates/ralph-prd-skill.md` - added post-creation workflow
+  - `src/__tests__/init/templates.test.ts` - content validation tests
+- **Learnings:** Use `vi.importActual` to read real files in mocked test contexts

@@ -369,6 +369,21 @@ Before marking PRD ready for review and sharing with the user, verify:
 - [ ] Problem statement is clear and compelling
 - [ ] Scope boundaries explicit
 
-Tell the user:
+### Register the PRD
 
-PRD saved to .ralph/prd/<name>/prd.md
+After writing the PRD markdown file, register it with ralph:
+
+```bash
+ralph prd add .ralph/prd/<feature-name>/prd.md <feature-name>
+```
+
+This converts the markdown to a structured format for task execution.
+
+### Ask About Execution
+
+After registration, ask the user:
+
+"PRD '<feature-name>' is registered. Would you like to start task execution now?
+
+- Run `/ralph-complete-next-task <feature-name>` to start
+- Or run `ralph run <feature-name>` from the CLI"

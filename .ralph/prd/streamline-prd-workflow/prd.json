@@ -23,7 +23,7 @@
         "transformed skill contains prompt about execution",
         "ralph init in test project produces correct skill"
       ],
-      "passes": false
+      "passes": true
     }
   ],
   "context": {
