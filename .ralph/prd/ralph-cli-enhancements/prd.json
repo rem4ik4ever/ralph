@@ -1,0 +1,111 @@
+{
+  "prdName": "ralph-cli-enhancements",
+  "tasks": [
+    {
+      "id": "manager-1",
+      "category": "manager",
+      "description": "Add getPrdInfo function to return PRD status and file paths",
+      "steps": [
+        "Create getPrdInfo function in src/prd/manager.ts",
+        "Return PRD name, status (in_progress/partial/not_found), task completion count",
+        "Return paths for prd.md, prd.json, progress.txt, iterations/",
+        "Indicate which files exist vs missing",
+        "Handle both local and global PRDs",
+        "Tests pass"
+      ],
+      "passes": true
+    },
+    {
+      "id": "command-1",
+      "category": "command",
+      "description": "Implement ralph prd <name> info command",
+      "steps": [
+        "Create src/commands/prd-info.ts following prd-add.ts pattern",
+        "Call getPrdInfo and format output",
+        "Show partial state for PRDs missing prd.json",
+        "Error gracefully when PRD doesn't exist",
+        "Add --help text",
+        "Tests pass"
+      ],
+      "passes": false
+    },
+    {
+      "id": "command-2",
+      "category": "command",
+      "description": "Implement ralph prd delete <name> command",
+      "steps": [
+        "Create src/commands/prd-delete.ts",
+        "List files to be deleted before confirmation",
+        "Prompt for confirmation using readline",
+        "Support --force flag to skip confirmation",
+        "Remove entire PRD directory recursively",
+        "Handle both local and global PRDs",
+        "Error gracefully when PRD doesn't exist",
+        "Add --help text",
+        "Tests pass"
+      ],
+      "passes": false
+    },
+    {
+      "id": "templates-1",
+      "category": "templates",
+      "description": "Create ralph-skill template documenting CLI usage",
+      "steps": [
+        "Create templates/ralph-skill.md",
+        "Document all ralph commands (init, prd add, prd list, prd delete, prd <name>)",
+        "Describe PRD lifecycle (create → add → run)",
+        "Document file structure (.ralph/prd/<name>/)",
+        "Include common workflows"
+      ],
+      "passes": false
+    },
+    {
+      "id": "cli-1",
+      "category": "cli",
+      "description": "Wire up new commands to CLI and update init",
+      "steps": [
+        "Register prd-info command in CLI",
+        "Register prd-delete command in CLI",
+        "Update src/init/skills.ts to install ralph-skill to ~/.claude/skills/ralph-skill/SKILL.md",
+        "Tests pass"
+      ],
+      "passes": false
+    },
+    {
+      "id": "testing-1",
+      "category": "testing",
+      "description": "Add comprehensive test coverage",
+      "steps": [
+        "Test getPrdInfo with existing PRD",
+        "Test getPrdInfo with partial PRD (only prd.md)",
+        "Test getPrdInfo with nonexistent PRD",
+        "Test prd delete with confirmation",
+        "Test prd delete with --force",
+        "Test prd delete with nonexistent PRD",
+        "All tests pass"
+      ],
+      "passes": false
+    }
+  ],
+  "context": {
+    "patterns": [
+      "Command structure in src/commands/prd-add.ts",
+      "PRD manager functions in src/prd/manager.ts (getPrdDir, getPrdFileStatus, listPrds)",
+      "Skill installation in src/init/skills.ts (installClaudeSkills)",
+      "Template loading in src/templates/templates.ts",
+      "commander library for CLI",
+      "fs/promises for file operations"
+    ],
+    "keyFiles": [
+      "src/commands/prd-add.ts",
+      "src/prd/manager.ts",
+      "src/init/skills.ts",
+      "templates/ralph-prd-skill.md"
+    ],
+    "nonGoals": [
+      "PRD rename/move functionality",
+      "PRD export to other formats",
+      "Bulk delete operations"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+## Codebase Patterns
+- Types in src/prd/types.ts, manager functions in src/prd/manager.ts
+- Export types and functions via src/prd/index.ts
+- Use `fileExists`/`dirExists` helpers for existence checks
+- Local PRDs take precedence over global PRDs
+
+## Task - manager-1
+- Added `PrdInfo`, `PrdFileInfo`, `PrdIterationsInfo` types to types.ts
+- Implemented `getPrdInfo(name)` in manager.ts
+- Returns PRD status (not_found/partial/pending/in_progress/completed)
+- Returns file paths and existence flags for prd.md, prd.json, progress.txt, iterations/
+- Handles local-first precedence for PRD lookup
+- **Files:** src/prd/types.ts, src/prd/manager.ts
+- **Learnings:** `readdir` can count files in iterations dir
