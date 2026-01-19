@@ -46,7 +46,11 @@ export async function promptAgentSelection(): Promise<AgentType | null> {
 export async function promptSkillInstallation(): Promise<boolean | null> {
   try {
     return await confirm({
-      message: 'Install ralph-prd skill and ralph-complete-next-task command?',
+      message:
+        'Install Claude Code skills and commands?\n' +
+        '  - ralph-prd skill (PRD creation)\n' +
+        '  - ralph skill (CLI docs)\n' +
+        '  - ralph-complete-next-task command',
       default: true,
     })
   } catch {
