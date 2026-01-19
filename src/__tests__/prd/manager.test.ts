@@ -14,6 +14,7 @@ import {
   getPrd,
   listPrds,
   isProjectInitialized,
+  getPrdInfo,
 } from '../../prd/manager.js'
 import type { PrdJson } from '../../prd/types.js'
 
@@ -393,6 +394,195 @@ describe('prd/manager', () => {
 
       expect(result).toHaveLength(1)
       expect(result[0].name).toBe('valid')
+    })
+  })
+
+  describe('getPrdInfo', () => {
+    it('returns not_found status when PRD does not exist', async () => {
+      vi.mocked(access).mockRejectedValue(new Error('ENOENT'))
+
+      const result = await getPrdInfo('nonexistent')
+
+      expect(result.found).toBe(false)
+      expect(result.status).toBe('not_found')
+      expect(result.tasksCompleted).toBe(0)
+      expect(result.tasksTotal).toBe(0)
+    })
+
+    it('returns partial status when only prd.md exists', async () => {
+      vi.mocked(access)
+        .mockResolvedValueOnce(undefined) // local dir exists
+        .mockRejectedValueOnce(new Error('ENOENT')) // global dir doesn't exist
+        .mockResolvedValueOnce(undefined) // prd.md exists
+        .mockRejectedValueOnce(new Error('ENOENT')) // no prd.json
+        .mockRejectedValueOnce(new Error('ENOENT')) // no progress.txt
+        .mockRejectedValueOnce(new Error('ENOENT')) // no iterations/
+
+      const result = await getPrdInfo('partial-prd')
+
+      expect(result.found).toBe(true)
+      expect(result.status).toBe('partial')
+      expect(result.location).toBe('local')
+      expect(result.files.prdMd.exists).toBe(true)
+      expect(result.files.prdJson.exists).toBe(false)
+    })
+
+    it('returns in_progress status when some tasks complete', async () => {
+      const prd: PrdJson = {
+        prdName: 'in-progress',
+        tasks: [
+          { id: 't1', category: 'c', description: 'd', steps: [], passes: true },
+          { id: 't2', category: 'c', description: 'd', steps: [], passes: false },
+        ],
+      }
+
+      vi.mocked(access).mockResolvedValue(undefined) // all files exist
+      vi.mocked(readdir).mockResolvedValue([]) // empty iterations
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('in-progress')
+
+      expect(result.found).toBe(true)
+      expect(result.status).toBe('in_progress')
+      expect(result.tasksCompleted).toBe(1)
+      expect(result.tasksTotal).toBe(2)
+    })
+
+    it('returns pending status when no tasks complete', async () => {
+      const prd: PrdJson = {
+        prdName: 'pending',
+        tasks: [
+          { id: 't1', category: 'c', description: 'd', steps: [], passes: false },
+        ],
+      }
+
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('pending')
+
+      expect(result.status).toBe('pending')
+      expect(result.tasksCompleted).toBe(0)
+      expect(result.tasksTotal).toBe(1)
+    })
+
+    it('returns completed status when all tasks complete', async () => {
+      const prd: PrdJson = {
+        prdName: 'completed',
+        tasks: [
+          { id: 't1', category: 'c', description: 'd', steps: [], passes: true },
+          { id: 't2', category: 'c', description: 'd', steps: [], passes: true },
+        ],
+      }
+
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('completed')
+
+      expect(result.status).toBe('completed')
+      expect(result.tasksCompleted).toBe(2)
+      expect(result.tasksTotal).toBe(2)
+    })
+
+    it('prefers local PRD over global', async () => {
+      const prd: PrdJson = {
+        prdName: 'local',
+        tasks: [],
+      }
+
+      vi.mocked(access).mockResolvedValue(undefined) // local exists
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('local')
+
+      expect(result.location).toBe('local')
+      expect(result.files.prdMd.path).toContain('/project/.ralph/prd/')
+    })
+
+    it('falls back to global PRD when local missing', async () => {
+      const prd: PrdJson = {
+        prdName: 'global-only',
+        tasks: [],
+      }
+
+      vi.mocked(access)
+        .mockRejectedValueOnce(new Error('ENOENT')) // local dir missing
+        .mockResolvedValue(undefined) // global exists
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('global-only')
+
+      expect(result.location).toBe('global')
+      expect(result.files.prdMd.path).toContain('/home/test/.ralph/prd/')
+    })
+
+    it('counts iteration files', async () => {
+      const prd: PrdJson = {
+        prdName: 'with-iterations',
+        tasks: [],
+      }
+
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue(['iter1.json', 'iter2.json'] as unknown as import('node:fs').Dirent[])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('with-iterations')
+
+      expect(result.files.iterations.exists).toBe(true)
+      expect(result.files.iterations.fileCount).toBe(2)
+    })
+
+    it('returns pending status for empty tasks array', async () => {
+      const prd: PrdJson = {
+        prdName: 'empty-tasks',
+        tasks: [],
+      }
+
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(prd))
+
+      const result = await getPrdInfo('empty-tasks')
+
+      // Empty tasks should be 'pending', not 'completed'
+      expect(result.status).toBe('pending')
+      expect(result.tasksTotal).toBe(0)
+      expect(result.tasksCompleted).toBe(0)
+    })
+
+    it('returns partial status when prd.json is invalid JSON', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue('{ invalid json }')
+
+      const result = await getPrdInfo('corrupt')
+
+      expect(result.status).toBe('partial')
+    })
+
+    it('returns partial status when tasks property is missing', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify({ prdName: 'no-tasks' }))
+
+      const result = await getPrdInfo('no-tasks')
+
+      expect(result.status).toBe('partial')
+    })
+
+    it('returns partial status when tasks is not an array', async () => {
+      vi.mocked(access).mockResolvedValue(undefined)
+      vi.mocked(readdir).mockResolvedValue([])
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify({ prdName: 'bad', tasks: 'not-array' }))
+
+      const result = await getPrdInfo('bad')
+
+      expect(result.status).toBe('partial')
     })
   })
 })

@@ -7,9 +7,12 @@ import {
   getClaudeDir,
   getTargetSkillDir,
   getTargetSkillPath,
+  getTargetRalphSkillDir,
+  getTargetRalphSkillPath,
   getTargetCommandPath,
   loadBundledSkill,
   loadBundledCommand,
+  loadBundledRalphSkill,
   BundledTemplateNotFoundError,
 } from '../init/index.js'
 
@@ -43,7 +46,11 @@ export async function promptAgentSelection(): Promise<AgentType | null> {
 export async function promptSkillInstallation(): Promise<boolean | null> {
   try {
     return await confirm({
-      message: 'Install ralph-prd skill and ralph-complete-next-task command?',
+      message:
+        'Install Claude Code skills and commands?\n' +
+        '  - ralph-prd skill (PRD creation)\n' +
+        '  - ralph skill (CLI docs)\n' +
+        '  - ralph-complete-next-task command',
       default: true,
     })
   } catch {
@@ -167,9 +174,11 @@ export async function installClaudeSkills(): Promise<void> {
   // Load bundled templates
   let skillContent: string
   let commandContent: string
+  let ralphSkillContent: string
   try {
     skillContent = await loadBundledSkill()
     commandContent = await loadBundledCommand()
+    ralphSkillContent = await loadBundledRalphSkill()
   } catch (err) {
     if (err instanceof BundledTemplateNotFoundError) {
       console.error(chalk.red('Failed to load bundled templates'))
@@ -178,7 +187,7 @@ export async function installClaudeSkills(): Promise<void> {
     throw err
   }
 
-  // Write skill
+  // Write ralph-prd skill
   const targetSkillDir = getTargetSkillDir()
   const targetSkillPath = getTargetSkillPath()
 
@@ -190,6 +199,24 @@ export async function installClaudeSkills(): Promise<void> {
     const error = err as NodeJS.ErrnoException
     if (error.code === 'EACCES') {
       console.error(chalk.red(`Permission denied: Cannot write ${targetSkillPath}`))
+    } else {
+      console.error(chalk.red(`Failed to install skill: ${error.message}`))
+    }
+    throw err
+  }
+
+  // Write ralph skill (CLI documentation)
+  const targetRalphSkillDir = getTargetRalphSkillDir()
+  const targetRalphSkillPath = getTargetRalphSkillPath()
+
+  try {
+    await mkdir(targetRalphSkillDir, { recursive: true })
+    await writeFile(targetRalphSkillPath, ralphSkillContent)
+    console.log(chalk.green(`✓ Installed skill: ${targetRalphSkillPath}`))
+  } catch (err) {
+    const error = err as NodeJS.ErrnoException
+    if (error.code === 'EACCES') {
+      console.error(chalk.red(`Permission denied: Cannot write ${targetRalphSkillPath}`))
     } else {
       console.error(chalk.red(`Failed to install skill: ${error.message}`))
     }

@@ -37,3 +37,29 @@ export interface PrdStatus {
   tasksCompleted: number
   location: 'local' | 'global'
 }
+
+export interface PrdFileInfo {
+  path: string
+  exists: boolean
+}
+
+export interface PrdIterationsInfo {
+  path: string
+  exists: boolean
+  fileCount: number
+}
+
+export interface PrdInfo {
+  name: string
+  found: boolean
+  location: 'local' | 'global'
+  status: 'not_found' | 'partial' | 'in_progress' | 'pending' | 'completed'
+  tasksCompleted: number
+  tasksTotal: number
+  files: {
+    prdMd: PrdFileInfo
+    prdJson: PrdFileInfo
+    progress: PrdFileInfo
+    iterations: PrdIterationsInfo
+  }
+}

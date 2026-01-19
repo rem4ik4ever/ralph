@@ -1,0 +1,56 @@
+## Codebase Patterns
+- Types in src/prd/types.ts, manager functions in src/prd/manager.ts
+- Export types and functions via src/prd/index.ts
+- Use `fileExists`/`dirExists` helpers for existence checks
+- Local PRDs take precedence over global PRDs
+
+## Task - manager-1
+- Added `PrdInfo`, `PrdFileInfo`, `PrdIterationsInfo` types to types.ts
+- Implemented `getPrdInfo(name)` in manager.ts
+- Returns PRD status (not_found/partial/pending/in_progress/completed)
+- Returns file paths and existence flags for prd.md, prd.json, progress.txt, iterations/
+- Handles local-first precedence for PRD lookup
+- **Files:** src/prd/types.ts, src/prd/manager.ts
+- **Learnings:** `readdir` can count files in iterations dir
+
+## Task - command-1
+- Created `src/commands/prd-info.ts` with `prdInfo(name)` function
+- Formatted output: PRD name, status, task progress, file paths
+- Shows "not registered" hint for partial PRDs
+- Exits 1 with error message when PRD not found
+- Wired command in src/index.ts as `prd info <name>`
+- **Files:** src/commands/prd-info.ts, src/index.ts
+
+## Task - command-2
+- Created `src/commands/prd-delete.ts` with `prdDelete(name, opts)` function
+- Lists files before deletion and prompts for confirmation
+- `--force` / `-f` flag skips confirmation
+- Uses `rm` with `recursive: true` to remove entire PRD directory
+- Uses `@inquirer/prompts` confirm (same as prd-add)
+- **Files:** src/commands/prd-delete.ts, src/index.ts
+
+## Task - templates-1
+- Created `templates/ralph-skill.md` with frontmatter (name, description)
+- Documented all commands: init, prd add, prd list, prd info, prd delete, run
+- Described PRD lifecycle: create → add → run
+- Documented file structure (.ralph/, prd.json, progress.txt)
+- Included common workflows: start feature, check progress, cleanup
+- **Files:** templates/ralph-skill.md
+
+## Task - cli-1
+- CLI commands wired in earlier tasks (command-1, command-2)
+- Added helper functions to src/init/templates.ts for ralph skill
+- Updated installClaudeSkills() in init.ts to install ralph skill
+- Installs to ~/.claude/skills/ralph/SKILL.md
+- **Files:** src/init/templates.ts, src/commands/init.ts
+- **Learnings:** Template loading uses same pattern for all skills
+
+## Task - testing-1
+- Added 8 tests for `getPrdInfo` in manager.test.ts
+- Added 5 tests for prd-info command in prd-info.test.ts
+- Added 8 tests for prd-delete command in prd-delete.test.ts
+- Covers: not_found, partial, pending, in_progress, completed statuses
+- Covers: confirmation, --force, Ctrl+C, file listing
+- Total: 218 tests pass
+- **Files:** src/__tests__/prd/manager.test.ts, src/__tests__/commands/prd-info.test.ts, src/__tests__/commands/prd-delete.test.ts
+- **Learnings:** Filter `console.log` mock calls for string values (undefined from empty log calls)

@@ -3,6 +3,8 @@ import { program } from 'commander'
 import { run } from './commands/run.js'
 import { prdAdd } from './commands/prd-add.js'
 import { prdList } from './commands/prd-list.js'
+import { prdInfo } from './commands/prd-info.js'
+import { prdDelete } from './commands/prd-delete.js'
 import { init } from './commands/init.js'
 
 program
@@ -34,5 +36,18 @@ prd
   .action(prdAdd)
 
 prd.command('list').description('List all PRDs').action(prdList)
+
+prd
+  .command('info')
+  .description('Show PRD info and file locations')
+  .argument('<name>', 'Name of PRD')
+  .action(prdInfo)
+
+prd
+  .command('delete')
+  .description('Delete PRD and all associated files')
+  .argument('<name>', 'Name of PRD to delete')
+  .option('-f, --force', 'Skip confirmation prompt')
+  .action(prdDelete)
 
 program.parse()

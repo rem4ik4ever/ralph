@@ -3,6 +3,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type {
   PrdDirMode,
+  PrdInfo,
   PrdJson,
   PrdLocation,
   PrdStatus,
@@ -252,4 +253,92 @@ export async function listPrds(): Promise<PrdStatus[]> {
   }
 
   return results
+}
+
+async function countIterationFiles(iterationsDir: string): Promise<number> {
+  try {
+    const entries = await readdir(iterationsDir)
+    return entries.length
+  } catch {
+    return 0
+  }
+}
+
+export async function getPrdInfo(name: string): Promise<PrdInfo> {
+  const localDir = getLocalPrdDir(name)
+  const globalDir = getGlobalPrdDir(name)
+
+  const localExists = await dirExists(localDir)
+  const globalExists = await dirExists(globalDir)
+
+  // Determine which location to use (local takes precedence)
+  const found = localExists || globalExists
+  const location: 'local' | 'global' = localExists ? 'local' : 'global'
+  const prdDir = localExists ? localDir : globalDir
+
+  // Build file paths
+  const prdMdPath = join(prdDir, 'prd.md')
+  const prdJsonPath = join(prdDir, 'prd.json')
+  const progressPath = join(prdDir, 'progress.txt')
+  const iterationsPath = join(prdDir, 'iterations')
+
+  // Check file existence
+  const hasMd = found && (await fileExists(prdMdPath))
+  const hasJson = found && (await fileExists(prdJsonPath))
+  const hasProgress = found && (await fileExists(progressPath))
+  const hasIterations = found && (await dirExists(iterationsPath))
+  const iterationCount = hasIterations ? await countIterationFiles(iterationsPath) : 0
+
+  // Determine status
+  let status: PrdInfo['status'] = 'not_found'
+  let tasksCompleted = 0
+  let tasksTotal = 0
+
+  if (!found) {
+    status = 'not_found'
+  } else if (hasMd && !hasJson) {
+    status = 'partial'
+  } else if (hasJson) {
+    // Read prd.json to compute status
+    try {
+      const content = await readFile(prdJsonPath, 'utf-8')
+      const prd = JSON.parse(content) as PrdJson
+
+      // Validate tasks array exists
+      if (!prd.tasks || !Array.isArray(prd.tasks)) {
+        status = 'partial'
+      } else {
+        tasksTotal = prd.tasks.length
+        tasksCompleted = prd.tasks.filter((t) => t.passes).length
+
+        if (tasksTotal === 0) {
+          // Empty tasks array = pending, not completed
+          status = 'pending'
+        } else if (tasksCompleted === 0) {
+          status = 'pending'
+        } else if (tasksCompleted === tasksTotal) {
+          status = 'completed'
+        } else {
+          status = 'in_progress'
+        }
+      }
+    } catch {
+      status = 'partial'
+    }
+  }
+
+  return {
+    name,
+    found,
+    location,
+    status,
+    tasksCompleted,
+    tasksTotal,
+    files: {
+      prdMd: { path: prdMdPath, exists: hasMd },
+      prdJson: { path: prdJsonPath, exists: hasJson },
+      progress: { path: progressPath, exists: hasProgress },
+      iterations: { path: iterationsPath, exists: hasIterations, fileCount: iterationCount },
+    },
+  }
 }

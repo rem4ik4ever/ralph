@@ -26,6 +26,18 @@ bun link
 
 ## Usage
 
+### Initialize Project
+
+Set up ralph in your project and install Claude Code skills:
+
+```bash
+ralph init
+```
+
+Creates `.ralph/` directory and installs skills to `~/.claude/skills/`:
+- `ralph-prd` - PRD creation skill
+- `ralph` - CLI documentation skill
+
 ### Add a PRD
 
 Convert markdown PRD to trackable JSON tasks:
@@ -36,11 +48,10 @@ ralph prd add <path> <name> [--agent claude]
 
 Example:
 ```bash
-ralph prd add feature.md my-feature
+ralph prd add .ralph/prd/my-feature/prd.md my-feature
 ```
 
-Creates `~/.ralph/prd/my-feature/` with:
-- `prd.md` - original markdown
+Creates:
 - `prd.json` - converted tasks with pass/fail tracking
 - `progress.txt` - cross-iteration memory
 
@@ -54,8 +65,38 @@ ralph prd list
 
 Output:
 ```
-1. my-feature - Add login flow - in_progress (3/7)
-2. refactor-api - API cleanup - pending (0/4)
+NAME           STATUS        PROGRESS  LOCATION
+my-feature     in_progress   3/7       local
+refactor-api   pending       0/4       global
+```
+
+### Show PRD Info
+
+Display PRD details and file locations:
+
+```bash
+ralph prd info <name>
+```
+
+Output:
+```
+PRD: my-feature
+Status: in_progress (3/7 tasks complete)
+
+Files:
+  prd.md:      .ralph/prd/my-feature/prd.md
+  prd.json:    .ralph/prd/my-feature/prd.json
+  progress:    .ralph/prd/my-feature/progress.txt
+  iterations:  .ralph/prd/my-feature/iterations/ (2 files)
+```
+
+### Delete PRD
+
+Remove a PRD and all associated files:
+
+```bash
+ralph prd delete <name>
+ralph prd delete <name> --force  # skip confirmation
 ```
 
 ### Run PRD
@@ -75,25 +116,35 @@ Agent picks up next incomplete task, implements it, runs feedback loops (tests/l
 
 ## How it works
 
-1. Write markdown PRD with tasks and verification steps
-2. `ralph prd add` converts to JSON with agent
-3. `ralph run` loops agent against PRD tasks
-4. Agent updates `prd.json` passes field on completion
-5. Agent maintains `progress.txt` with learnings across iterations
-6. Stops when all tasks pass or max iterations reached
-7. Logs each iteration to `~/.ralph/prd/<name>/iterations/`
+1. `ralph init` sets up project and installs Claude Code skills
+2. Write markdown PRD (or use `ralph-prd` skill in Claude Code)
+3. `ralph prd add` converts markdown to JSON tasks
+4. `ralph run` loops agent against PRD tasks
+5. Agent updates `prd.json` passes field on completion
+6. Agent maintains `progress.txt` with learnings across iterations
+7. Stops when all tasks pass or max iterations reached
+8. `ralph prd info` shows progress and file locations
 
 ## PRD folder structure
 
+Local PRDs (in project):
+```
+.ralph/
+├── config.json   # Project configuration
+└── prd/<name>/
+    ├── prd.md        # Original markdown
+    ├── prd.json      # Tasks with passes field
+    ├── progress.txt  # Cross-iteration memory
+    └── iterations/   # Iteration logs
+```
+
+Global PRDs (fallback):
 ```
 ~/.ralph/prd/<name>/
-├── prd.md        # Original markdown
-├── prd.json      # Tasks with passes field
-├── progress.txt  # Cross-iteration memory
-└── iterations/   # Iteration logs
-    ├── 0.json
-    └── ...
+└── ...
 ```
+
+Local PRDs take precedence over global when both exist.
 
 ## Supported agents
 
