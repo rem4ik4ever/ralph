@@ -1,6 +1,6 @@
 {
   "name": "rlph-cli",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Loop coding agent CLI - run agents headlessly in a loop",
   "type": "module",
   "bin": {

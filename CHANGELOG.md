@@ -1,3 +1,18 @@
+## [1.5.0](https://github.com/rem4ik4ever/ralph/compare/v1.4.0...v1.5.0) (2026-01-19)
+
+### Features
+
+* **init:** install ralph skill during init ([84f4e6c](https://github.com/rem4ik4ever/ralph/commit/84f4e6cbce3ebc9e8c5fe81d8a4eec26ad36d86f))
+* **prd:** add getPrdInfo function for PRD status and file paths ([9dafe02](https://github.com/rem4ik4ever/ralph/commit/9dafe02d7ec5765284ad0b977728500c27c00dbd))
+* **prd:** add prd delete command with confirmation ([6ee98ef](https://github.com/rem4ik4ever/ralph/commit/6ee98ef5544962cac4b7f6cd81dfd49c1d83d681))
+* **prd:** add prd info command to show file locations ([aea2a98](https://github.com/rem4ik4ever/ralph/commit/aea2a98ff7ef6c9431f99798794d7373c9941e29))
+* **templates:** add ralph-skill template for CLI documentation ([1bed33f](https://github.com/rem4ik4ever/ralph/commit/1bed33f045dad4674f4cbce6100bf1e8d20402f8))
+
+### Bug Fixes
+
+* address code review feedback ([25a99ec](https://github.com/rem4ik4ever/ralph/commit/25a99ecffa6d527a3fef5dd4103687296ef1fe0c))
+* **init:** improve skill installation prompt to list all items ([12073bc](https://github.com/rem4ik4ever/ralph/commit/12073bcf1fa36c1d46e32e07ac42ce2c454cae90))
+
 ## [1.4.0](https://github.com/rem4ik4ever/ralph/compare/v1.3.1...v1.4.0) (2026-01-18)
 
 ### Features
