@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/rem4ik4ever/ralph/compare/v1.5.0...v1.6.0) (2026-03-09)
+
+### Features
+
+* **cli:** default to acceptEdits mode, add --yolo flag ([89932cc](https://github.com/rem4ik4ever/ralph/commit/89932cc93b1ff20ffee40dac0d9aa1eb9d1adf30))
+
 ## [1.5.0](https://github.com/rem4ik4ever/ralph/compare/v1.4.0...v1.5.0) (2026-01-19)
 
 ### Features
