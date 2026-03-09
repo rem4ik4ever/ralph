@@ -16,10 +16,14 @@ export const claude: Agent = {
     const onProcess = options?.onProcess
 
     return new Promise((resolve, reject) => {
+      const permissionArgs = options?.yolo
+        ? ['--dangerously-skip-permissions']
+        : ['--permission-mode', 'acceptEdits']
+
       const proc = spawn('claude', [
         '-p',
         '--verbose',
-        '--dangerously-skip-permissions',
+        ...permissionArgs,
         '--output-format', 'stream-json',
       ], {
         cwd,

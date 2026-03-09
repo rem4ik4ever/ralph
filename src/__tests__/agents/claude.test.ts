@@ -32,8 +32,26 @@ describe('agents/claude', () => {
     expect(claude.name).toBe('claude')
   })
 
-  it('spawns claude with stream-json flag', async () => {
+  it('spawns claude in acceptEdits mode by default', async () => {
     const promise = claude.execute('test prompt', '/test/cwd')
+
+    mockProcess.stdout.emit('data', Buffer.from('{"type":"result","subtype":"success","is_error":false,"duration_ms":100}\n'))
+    mockProcess.emit('close', 0)
+
+    await promise
+
+    expect(spawn).toHaveBeenCalledWith(
+      'claude',
+      ['-p', '--verbose', '--permission-mode', 'acceptEdits', '--output-format', 'stream-json'],
+      expect.objectContaining({
+        cwd: '/test/cwd',
+        shell: true,
+      })
+    )
+  })
+
+  it('spawns claude with dangerously-skip-permissions when yolo', async () => {
+    const promise = claude.execute('test prompt', '/test/cwd', { yolo: true })
 
     mockProcess.stdout.emit('data', Buffer.from('{"type":"result","subtype":"success","is_error":false,"duration_ms":100}\n'))
     mockProcess.emit('close', 0)

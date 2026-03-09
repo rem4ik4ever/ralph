@@ -14,6 +14,7 @@ import { ensureTemplates, loadTemplate, substituteVars } from '../templates/inde
 
 export interface PrdAddOptions {
   agent: string
+  yolo?: boolean
 }
 
 export async function promptOverride(
@@ -95,6 +96,7 @@ export async function prdAdd(
   const agent = getAgent(opts.agent)
   const result = await agent.execute(prompt, process.cwd(), {
     onOutput: (chunk) => process.stdout.write(chunk),
+    yolo: opts.yolo,
   })
 
   console.log()

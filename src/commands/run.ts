@@ -13,6 +13,7 @@ const TASKS_COMPLETE_MARKER = '<tasks>COMPLETE</tasks>'
 export interface RunOptions {
   agent: string
   iterations: string
+  yolo?: boolean
 }
 
 type SignalType = 'SIGINT' | 'SIGTERM' | 'SIGHUP'
@@ -190,6 +191,7 @@ export async function run(prdName: string, opts: RunOptions): Promise<void> {
             void persister.appendStderr(chunk)
           },
           onProcess: (proc) => signalHandlers.setProcess(proc),
+          yolo: opts.yolo,
         })
       } catch (err) {
         // Execution failed - persist crash state and re-throw
