@@ -14,6 +14,8 @@ export interface ExecuteOptions {
   onStderr?: (chunk: string) => void
   /** Called with spawned process for signal handling */
   onProcess?: (proc: ChildProcess) => void
+  /** Skip all permission checks (--dangerously-skip-permissions) */
+  yolo?: boolean
 }
 
 export interface Agent {

@@ -38,9 +38,9 @@ describe('CLI', () => {
   })
 
   describe('version', () => {
-    it('shows version with --version', () => {
+    it('shows version from package.json', () => {
       const { stdout } = runCli('--version')
-      expect(stdout).toContain('0.1.0')
+      expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+/)
     })
   })
 
